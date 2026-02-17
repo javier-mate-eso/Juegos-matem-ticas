@@ -339,7 +339,7 @@ html,body{width:100%;min-height:100%;font-family:'Nunito',sans-serif;background:
 // ⚙️ CONFIGURACIÓN — CAMBIA ESTA URL
 // Pega aquí la URL de tu Google Apps Script después de publicarlo
 // ════════════════════════════════════
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywTi9fqe8KOREQcwOPP_wOxCFGZrL1VRuNqnTkp7AfFtqUq-8UNUmSiRq8bHiCag1l/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyS1yksL7oHchAdYipFhVbhwRUGoL82sLHTmsupB-Yj6FYN1SEnkgpFkEwkcGOC734F/exec';
 
 // Clases disponibles (personaliza según tu centro)
 // También puedes cambiarlas en el <select> del HTML arriba
@@ -392,7 +392,7 @@ async function sendToSheets(data){
   ind.className='sending-indicator';
   ind.textContent='📡 Enviando resultados a tu profe…';
 
-  if(!SCRIPT_URL || SCRIPT_URL==='https://script.google.com/macros/s/AKfycbywTi9fqe8KOREQcwOPP_wOxCFGZrL1VRuNqnTkp7AfFtqUq-8UNUmSiRq8bHiCag1l/exec'){
+  if(!SCRIPT_URL || SCRIPT_URL==='PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT'){
     ind.className='sending-indicator err';
     ind.textContent='⚠️ Script no configurado (solo demo)';
     return;
