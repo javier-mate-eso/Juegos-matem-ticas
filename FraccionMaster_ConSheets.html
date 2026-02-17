@@ -211,12 +211,7 @@ html,body{width:100%;min-height:100%;font-family:'Nunito',sans-serif;background:
       <label>TU CLASE</label>
       <select id="input-clase">
         <option value="">— Selecciona tu clase —</option>
-        <option>1º ESO A</option>
-        <option>1º ESO B</option>
-        <option>1º ESO C</option>
-        <option>1º ESO D</option>
-        <option>2º ESO A</option>
-        <option>2º ESO B</option>
+        <option>1º ESO </option>
         <option>Otro</option>
       </select>
     </div>
@@ -344,7 +339,7 @@ html,body{width:100%;min-height:100%;font-family:'Nunito',sans-serif;background:
 // ⚙️ CONFIGURACIÓN — CAMBIA ESTA URL
 // Pega aquí la URL de tu Google Apps Script después de publicarlo
 // ════════════════════════════════════
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzSsC2r_wWpZsXu0Ka2Z0Y7SkoZSMRGbm3HmmprNri061sngjFZt8oBemoK6ZhO06w8VQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywTi9fqe8KOREQcwOPP_wOxCFGZrL1VRuNqnTkp7AfFtqUq-8UNUmSiRq8bHiCag1l/exec';
 
 // Clases disponibles (personaliza según tu centro)
 // También puedes cambiarlas en el <select> del HTML arriba
@@ -397,7 +392,7 @@ async function sendToSheets(data){
   ind.className='sending-indicator';
   ind.textContent='📡 Enviando resultados a tu profe…';
 
-  if(!SCRIPT_URL || SCRIPT_URL==='PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT'){
+  if(!SCRIPT_URL || SCRIPT_URL==='https://script.google.com/macros/s/AKfycbywTi9fqe8KOREQcwOPP_wOxCFGZrL1VRuNqnTkp7AfFtqUq-8UNUmSiRq8bHiCag1l/exec'){
     ind.className='sending-indicator err';
     ind.textContent='⚠️ Script no configurado (solo demo)';
     return;
