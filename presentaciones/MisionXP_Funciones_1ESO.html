@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Misión XP — Funciones y Proporcionalidad</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap');
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+:root {
+  --void:    #08080F;
+  --dark:    #0D0D1A;
+  --dark2:   #14142B;
+  --dark3:   #1E1E3A;
+  --cyan:    #00FFFF;
+  --cyan2:   #00BFFF;
+  --purple:  #AA00FF;
+  --purple2: #7B00CC;
+  --gold:    #FFD700;
+  --gold2:   #FFA500;
+  --green:   #00FF88;
+  --green2:  #00CC66;
+  --red:     #FF4444;
+  --white:   #E8E8FF;
+  --muted:   #4A4A7A;
+  --c1: #00FFFF;
+  --c2: #AA00FF;
+  --c3: #FF6600;
+  --c4: #00FF88;
+  --c5: #FF44AA;
+}
+
+html, body { width:100%; height:100%; background:#000; overflow:hidden; cursor:pointer; }
+
+#stage {
+  position:absolute; width:1280px; height:720px;
+  transform-origin:0 0; overflow:hidden;
+  font-family:'VT323', monospace;
+  image-rendering: pixelated;
+}
+
+/* ── PIXEL STARFIELD ── */
+.rpg-bg {
+  position:absolute; inset:0;
+  background:var(--void);
+  background-image:
+    radial-gradient(1px 1px at 8%  12%, rgba(0,255,255,.8)  0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 45%, rgba(255,255,255,.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 42% 8%,  rgba(170,0,255,.6)  0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 35%, rgba(255,255,255,.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 78% 68%, rgba(0,255,136,.6)  0%, transparent 100%),
+    radial-gradient(2px 2px at 90% 22%, rgba(0,255,255,.5)  0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 92%, rgba(170,0,255,.5)  0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 72%, rgba(255,255,255,.8) 0%, transparent 100%),
+    radial-gradient(2px 2px at 72% 88%, rgba(255,215,0,.4)  0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 52%, rgba(0,255,255,.7)  0%, transparent 100%),
+    radial-gradient(1px 1px at 5%  55%, rgba(255,255,255,.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 48% 55%, rgba(170,0,255,.4)  0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 78%, rgba(0,255,136,.5)  0%, transparent 100%);
+}
+/* Scanline overlay */
+.rpg-bg::after {
+  content:'';
+  position:absolute; inset:0;
+  background:repeating-linear-gradient(0deg,transparent 0px,transparent 3px,rgba(0,0,0,.12) 3px,rgba(0,0,0,.12) 4px);
+  pointer-events:none;
+}
+
+/* Grid floor effect */
+.grid-floor {
+  position:absolute; bottom:0; left:0; right:0; height:220px;
+  background:
+    linear-gradient(rgba(0,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,.04) 1px, transparent 1px);
+  background-size:60px 60px;
+  transform:perspective(400px) rotateX(50deg);
+  transform-origin:bottom center;
+  opacity:.6;
+}
+
+/* ── SLIDES ── */
+.slide { position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .4s ease; }
+.slide.active { opacity:1; pointer-events:all; }
+
+/* ── PIXEL BORDER ── */
+.pixel-border {
+  position:absolute; inset:16px;
+  border:3px solid var(--cyan);
+  box-shadow:0 0 0 6px var(--void), 0 0 0 8px var(--cyan2), 0 0 30px rgba(0,255,255,.4);
+  pointer-events:none; z-index:2;
+}
+.pixel-border::before {
+  content:'';
+  position:absolute; inset:4px;
+  border:1px solid rgba(0,255,255,.2);
+}
+
+/* ── XP TRACKER ── */
+.tracker {
+  position:absolute; top:0; left:0; right:0; height:62px;
+  background:rgba(8,8,15,.97);
+  border-bottom:2px solid rgba(0,255,255,.3);
+  display:flex; align-items:center; justify-content:center;
+  gap:8px; padding:0 16px; z-index:10;
+}
+.level-btn {
+  width:134px; height:48px;
+  border:2px solid rgba(74,74,122,.5);
+  background:rgba(13,13,26,.8);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px; transition:all .4s; border-radius:2px;
+  position:relative; overflow:hidden;
+}
+.level-btn::after {
+  content:'';
+  position:absolute; bottom:0; left:0; right:0; height:3px;
+  background:var(--cyan); transform:scaleX(0); transform-origin:left;
+  transition:transform .4s;
+}
+.level-btn.active::after { transform:scaleX(1); }
+.level-btn.done::after   { transform:scaleX(1); background:var(--green); }
+.level-btn.active { background:rgba(0,255,255,.12); border-color:var(--cyan); box-shadow:0 0 14px rgba(0,255,255,.35); }
+.level-btn.done   { background:rgba(0,255,136,.1); border-color:var(--green2); }
+.lv-num   { font-family:'Press Start 2P',monospace; font-size:10px; color:var(--muted); }
+.level-btn.active .lv-num { color:var(--cyan); }
+.level-btn.done   .lv-num { color:var(--green); }
+.lv-label { font-size:10px; color:rgba(74,74,122,.8); letter-spacing:1px; }
+.level-btn.active .lv-label,
+.level-btn.done   .lv-label { color:rgba(232,232,255,.7); }
+
+/* ── HUD PANELS ── */
+.rpg-panel {
+  background:rgba(13,13,26,.88);
+  border:2px solid rgba(0,255,255,.35);
+  box-shadow:0 0 20px rgba(0,255,255,.1), inset 0 0 30px rgba(0,0,0,.4);
+  position:relative;
+}
+.rpg-panel::before {
+  content:attr(data-label);
+  position:absolute; top:-11px; left:14px;
+  background:var(--dark); color:var(--cyan2);
+  font-size:10px; letter-spacing:3px; padding:0 8px;
+  font-family:'Share Tech Mono',monospace;
+}
+.rpg-panel-gold {
+  background:rgba(20,16,0,.88);
+  border:2px solid rgba(255,215,0,.5);
+  box-shadow:0 0 20px rgba(255,215,0,.15);
+}
+.rpg-panel-green {
+  background:rgba(0,20,12,.88);
+  border:2px solid var(--green2);
+  box-shadow:0 0 25px rgba(0,255,136,.2);
+}
+.rpg-panel-purple {
+  background:rgba(15,0,28,.88);
+  border:2px solid rgba(170,0,255,.5);
+  box-shadow:0 0 18px rgba(170,0,255,.2);
+}
+
+/* ── XP BAR ── */
+.xp-track { height:8px; background:rgba(0,255,255,.1); border:1px solid rgba(0,255,255,.2); border-radius:1px; overflow:hidden; }
+.xp-fill  { height:100%; background:linear-gradient(90deg,var(--cyan2),var(--cyan)); box-shadow:0 0 8px rgba(0,255,255,.6); transition:width .8s ease; }
+
+/* ── LEVEL BAND ── */
+.level-band {
+  position:absolute; left:26px; right:26px; height:28px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; letter-spacing:3px; color:var(--muted);
+  font-family:'Share Tech Mono',monospace;
+  border-top:1px solid rgba(0,255,255,.1);
+  border-bottom:1px solid rgba(0,255,255,.1);
+}
+
+/* ── GRAPH SVG ── */
+.graph-container {
+  background:rgba(0,0,0,.5);
+  border:1.5px solid rgba(0,255,255,.25);
+}
+
+/* ── BADGES ── */
+.badge {
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:4px 12px; font-size:10px; letter-spacing:2px;
+  font-family:'Share Tech Mono',monospace;
+}
+.badge-cyan   { background:rgba(0,255,255,.12); color:var(--cyan); border:1px solid rgba(0,255,255,.4); }
+.badge-green  { background:rgba(0,255,136,.12); color:var(--green); border:1px solid var(--green2); }
+.badge-gold   { background:rgba(255,215,0,.12); color:var(--gold); border:1px solid rgba(255,215,0,.4); }
+.badge-purple { background:rgba(170,0,255,.15); color:#CC88FF; border:1px solid rgba(170,0,255,.4); }
+
+/* ── FORMULA BOX ── */
+.formula-box {
+  background:rgba(0,0,8,.7);
+  border:2px solid var(--gold);
+  box-shadow:0 0 18px rgba(255,215,0,.25);
+  padding:12px 24px;
+  text-align:center;
+  display:inline-block;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes pulse-cyan  { 0%,100%{box-shadow:0 0 20px rgba(0,255,255,.3)} 50%{box-shadow:0 0 50px rgba(0,255,255,.7)} }
+@keyframes pulse-green { 0%,100%{box-shadow:0 0 20px rgba(0,255,136,.3)} 50%{box-shadow:0 0 50px rgba(0,255,136,.7)} }
+@keyframes level-up    { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+@keyframes blink-cursor{ 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes float-sprite{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes slide-in-rpg{
+  from{opacity:0; transform:translateY(20px)}
+  to  {opacity:1; transform:translateY(0)}
+}
+.slide.active > * { animation:slide-in-rpg .3s ease-out; }
+.float-anim { animation:float-sprite 2s ease-in-out infinite; }
+.blink      { animation:blink-cursor 1s step-end infinite; }
+
+/* ── NAV BAR ── */
+#nav-bar {
+  position:fixed; bottom:10px; left:50%; transform:translateX(-50%);
+  display:flex; align-items:center; gap:10px;
+  background:rgba(8,8,15,.95); border:2px solid rgba(0,255,255,.3);
+  padding:5px 14px; z-index:9999; border-radius:2px;
+  opacity:0; transition:opacity .3s;
+  box-shadow:0 4px 20px rgba(0,0,0,.9), 0 0 20px rgba(0,255,255,.1);
+}
+#nav-bar:hover, body:hover #nav-bar { opacity:1; }
+.nav-btn {
+  background:none; border:none; cursor:pointer;
+  color:var(--cyan); font-size:14px; padding:4px 8px;
+  font-family:'Share Tech Mono',monospace; transition:color .2s;
+}
+.nav-btn:hover { color:var(--white); }
+#slide-counter { color:var(--muted); font-size:10px; font-family:'Share Tech Mono',monospace; min-width:60px; text-align:center; }
+.nav-sep { width:1px; height:16px; background:rgba(0,255,255,.2); }
+#btn-voice.speaking { color:var(--green); text-shadow:0 0 8px var(--green); }
+#btn-voice.muted    { color:var(--muted); }
+#voice-speed { background:none; border:1px solid rgba(0,255,255,.2); color:var(--muted); font-size:9px; font-family:'Share Tech Mono',monospace; padding:2px 6px; cursor:pointer; outline:none; border-radius:2px; }
+#voice-speed option { background:var(--dark); }
+#progress-line { position:fixed; bottom:0; left:0; height:2px; background:linear-gradient(90deg,var(--purple),var(--cyan)); transition:width .4s ease; z-index:9998; }
+#speak-bar { position:fixed; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--cyan2),var(--cyan),var(--cyan2)); background-size:200% 100%; animation:speak-wave 1s linear infinite; z-index:9997; display:none; }
+@keyframes speak-wave { from{background-position:0%} to{background-position:200%} }
+#click-hint { position:absolute; bottom:18px; left:0; right:0; text-align:center; font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--muted); z-index:6; }
+</style>
+</head>
+<body>
+<div id="speak-bar"></div>
+<div id="stage"></div>
+<div id="nav-bar">
+  <button class="nav-btn" id="btnPrev">◄</button>
+  <span id="slide-counter">1 / 1</span>
+  <button class="nav-btn" id="btnNext">►</button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" id="btn-voice" title="Narrador (M)">🔊</button>
+  <select id="voice-speed"><option value="0.7">LENTO</option><option value="0.85" selected>NORMAL</option><option value="1.1">RÁPIDO</option></select>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" id="btn-music" title="Música 8-bit (N)">🎵</button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" id="btn-fs">⛶</button>
+</div>
+<div id="progress-line"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// GRAPH HELPER
+// ═══════════════════════════════════════════════════════════════
+function graphSVG({points=[], line=null, xMax=6, yMax=12, w=260, h=220, color='#00FFFF', label='', xLabel='x', yLabel='y'}) {
+  const pad=38, gw=w-pad*2, gh=h-pad*2;
+  const px = x => pad + (x/xMax)*gw;
+  const py = y => h - pad - (y/yMax)*gh;
+
+  // Grid lines
+  let grid='';
+  for(let i=0;i<=xMax;i++) {
+    const x=px(i);
+    grid+=`<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="rgba(0,255,255,.08)" stroke-width="1"/>`;
+    if(i>0) grid+=`<text x="${x}" y="${h-pad+14}" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="rgba(0,255,255,.5)">${i}</text>`;
+  }
+  for(let j=0;j<=yMax;j+=2) {
+    const y=py(j);
+    grid+=`<line x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}" stroke="rgba(0,255,255,.08)" stroke-width="1"/>`;
+    if(j>0) grid+=`<text x="${pad-6}" y="${y+4}" text-anchor="end" font-family="Share Tech Mono" font-size="10" fill="rgba(0,255,255,.5)">${j}</text>`;
+  }
+
+  // Axes
+  const axes=`
+    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad+6}" stroke="rgba(0,255,255,.7)" stroke-width="2"/>
+    <line x1="${pad-6}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="rgba(0,255,255,.7)" stroke-width="2"/>
+    <text x="${pad}" y="${pad-6}" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="rgba(0,255,255,.7)">${yLabel}</text>
+    <text x="${w-pad+10}" y="${h-pad+4}" text-anchor="start" font-family="Share Tech Mono" font-size="10" fill="rgba(0,255,255,.7)">${xLabel}</text>
+    <text x="${pad-8}" y="${h-pad+4}" text-anchor="middle" font-family="Share Tech Mono" font-size="9" fill="rgba(0,255,255,.5)">0</text>`;
+
+  // Line
+  let linePath='';
+  if(line!==null) {
+    const x1=0, y1=line.m*x1+line.b, x2=xMax, y2=line.m*x2+line.b;
+    if(y1>=0&&y1<=yMax&&y2>=0&&y2<=yMax)
+      linePath=`<line x1="${px(x1)}" y1="${py(y1)}" x2="${px(x2)}" y2="${py(y2)}" stroke="${color}" stroke-width="2.5" opacity=".7"/>`;
+    else {
+      // clip to bounds
+      linePath=`<line x1="${px(0)}" y1="${py(Math.max(0,line.b))}" x2="${px(xMax)}" y2="${py(Math.min(yMax,line.m*xMax+line.b))}" stroke="${color}" stroke-width="2.5" opacity=".7"/>`;
+    }
+  }
+
+  // Points
+  let dots='';
+  points.forEach(([x,y],i)=>{
+    dots+=`<circle cx="${px(x)}" cy="${py(y)}" r="5" fill="${color}" opacity=".9"/>
+           <text x="${px(x)+8}" y="${py(y)-6}" font-family="Share Tech Mono" font-size="9" fill="${color}">(${x},${y})</text>`;
+  });
+
+  // Label
+  const lbl=label?`<text x="${w/2}" y="14" text-anchor="middle" font-family="Share Tech Mono" font-size="10" fill="${color}" opacity=".8">${label}</text>`:'';
+
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;margin:auto;background:rgba(0,0,8,.6);border:1px solid rgba(0,255,255,.2);">
+    ${lbl}${grid}${axes}${linePath}${dots}
+  </svg>`;
+}
+
+// Proportionality table helper
+function tableHTML(headers, rows, color='#00FFFF') {
+  return `<table style="border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:15px;margin:0 auto;">
+    <tr>${headers.map(h=>`<th style="border:1px solid ${color}44;padding:8px 18px;background:${color}18;color:${color};">${h}</th>`).join('')}</tr>
+    ${rows.map(r=>`<tr>${r.map(c=>`<td style="border:1px solid ${color}22;padding:7px 18px;color:#E8E8FF;text-align:center;">${c}</td>`).join('')}</tr>`).join('')}
+  </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const LV_COLORS = ['','#00FFFF','#AA00FF','#FF6600','#00FF88','#FF44AA'];
+const LV_ICONS  = ['','⚔️','🧙','🏹','🛡️','👑'];
+const LV_NAMES  = ['','NIVEL 1','NIVEL 2','NIVEL 3','NIVEL 4','NIVEL 5'];
+const LV_LABELS = ['','Aprendiz','Explorador','Mago','Paladín','Héroe'];
+const LV_ZONES  = ['','LA ALDEA','EL BOSQUE','LA MAZMORRA','EL CASTILLO','EL TRONO'];
+
+const SLIDES = [
+  { type:'cover' },
+  { type:'story' },
+  { type:'instructions' },
+
+  // NIVEL 1 — Proporcionalidad directa
+  { type:'sep', lv:1, xp:[],
+    title:'NIVEL 1 — LA ALDEA',
+    subtitle:'Proporcionalidad directa',
+    desc:'El mercader de la aldea vende pociones. Cuantas más compres, más pagas. La razón siempre es constante.',
+    formula:'y = k · x     (k = constante de proporcionalidad)' },
+  { type:'q', lv:1, xp:[], eq:1, total:3,
+    context:'Una poción cuesta <strong>5 monedas</strong>. ¿Cuánto cuestan 4 pociones?',
+    question:'Calcula: y = 5 · x, con x = 4',
+    visual: tableHTML(['Pociones (x)','Precio (y)'],[['1','5'],['2','10'],['3','15'],['4','?']]),
+    eqRaw:'Una poción cuesta 5 monedas. ¿Cuánto cuestan 4 pociones? y es igual a 5 por x.',
+    hint:'k = 5. Multiplica 5 × 4' },
+  { type:'s', lv:1, xp:[], eq:1, total:3, solution:'y = 20 monedas', method:'y = 5 · 4 = 20 monedas' },
+
+  { type:'q', lv:1, xp:[], eq:2, total:3,
+    context:'Un guerrero recorre <strong>3 km por hora</strong>. ¿Cuánto tarda en recorrer 12 km?',
+    question:'Calcula x (horas) si y = 3x y y = 12',
+    visual: graphSVG({points:[[1,3],[2,6],[3,9],[4,12]],line:{m:3,b:0},xMax:5,yMax:15,label:'v = 3 km/h',xLabel:'h',yLabel:'km'}),
+    eqRaw:'Un guerrero recorre 3 kilómetros por hora. ¿Cuántas horas necesita para recorrer 12 kilómetros?',
+    hint:'12 = 3 · x → x = 12 ÷ 3' },
+  { type:'s', lv:1, xp:[], eq:2, total:3, solution:'x = 4 horas', method:'12 = 3 · x → x = 12 ÷ 3 = 4 horas' },
+
+  { type:'q', lv:1, xp:[], eq:3, total:3,
+    context:'¿Cuál es la constante de proporcionalidad si x = 6 e y = 42?',
+    question:'Calcula k en y = k · x',
+    visual: `<div style="text-align:center;padding:30px;">
+      <div style="font-family:'Press Start 2P',monospace;font-size:28px;color:#00FFFF;">y = k · x</div>
+      <div style="margin-top:20px;font-family:'Share Tech Mono',monospace;font-size:22px;color:#E8E8FF;">42 = k · 6</div>
+      <div style="margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:18px;color:#FFD700;">k = ?</div>
+    </div>`,
+    eqRaw:'¿Cuál es la constante de proporcionalidad si x vale 6 e y vale 42?',
+    hint:'k = y ÷ x = 42 ÷ 6' },
+  { type:'s', lv:1, xp:[], eq:3, total:3, solution:'k = 7', method:'k = 42 ÷ 6 = 7' },
+
+  { type:'levelup', lv:2, xp:[1], cleared:1, next:2 },
+
+  // NIVEL 2 — Tablas de valores
+  { type:'sep', lv:2, xp:[1],
+    title:'NIVEL 2 — EL BOSQUE',
+    subtitle:'Tablas de valores de una función',
+    desc:'Para atravesar el bosque encantado, debes completar las tablas mágicas. Cada función tiene su patrón.',
+    formula:'f(x): para cada x, calcula y sustituyendo en la expresión' },
+  { type:'q', lv:2, xp:[1], eq:1, total:3,
+    context:'La función del hechicero es <strong>y = 2x + 1</strong>. Completa la tabla.',
+    question:'Calcula y para x = 0, 1, 2, 3',
+    visual: tableHTML(['x','y = 2x + 1'],[['0','?'],['1','?'],['2','?'],['3','?']],'#AA00FF'),
+    eqRaw:'La función es y igual a 2 por x más 1. Calcula y para x igual a 0, 1, 2 y 3.',
+    hint:'Sustituye: x=0 → 2·0+1=1; x=1 → 2·1+1=3...' },
+  { type:'s', lv:2, xp:[1], eq:1, total:3,
+    solution:'y = 1, 3, 5, 7',
+    method:'x=0→1 | x=1→3 | x=2→5 | x=3→7',
+    visual: tableHTML(['x','y = 2x + 1'],[['0','1'],['1','3'],['2','5'],['3','7']],'#00FF88') },
+
+  { type:'q', lv:2, xp:[1], eq:2, total:3,
+    context:'El dragón vuela con la función <strong>y = 3x</strong>. Completa su ruta.',
+    question:'Calcula y para x = 1, 2, 3, 4',
+    visual: tableHTML(['x (horas)','y = 3x (km)'],[['1','?'],['2','?'],['3','?'],['4','?']],'#AA00FF'),
+    eqRaw:'La función del dragón es y igual a 3 por x. Calcula y para x igual a 1, 2, 3 y 4.',
+    hint:'Multiplica cada x por 3' },
+  { type:'s', lv:2, xp:[1], eq:2, total:3,
+    solution:'y = 3, 6, 9, 12',
+    method:'1→3 | 2→6 | 3→9 | 4→12',
+    visual: tableHTML(['x (horas)','y = 3x (km)'],[['1','3'],['2','6'],['3','9'],['4','12']],'#00FF88') },
+
+  { type:'q', lv:2, xp:[1], eq:3, total:3,
+    context:'La función del mago es <strong>y = x + 4</strong>. Encuentra el valor perdido: cuando x = 8.',
+    question:'Calcula y cuando x = 8 en y = x + 4',
+    visual: tableHTML(['x','y = x + 4'],[['2','6'],['5','9'],['8','?']],'#AA00FF'),
+    eqRaw:'La función es y igual a x más 4. ¿Cuánto vale y cuando x vale 8?',
+    hint:'Sustituye x = 8 en y = x + 4' },
+  { type:'s', lv:2, xp:[1], eq:3, total:3, solution:'y = 12', method:'y = 8 + 4 = 12' },
+
+  { type:'levelup', lv:3, xp:[1,2], cleared:2, next:3 },
+
+  // NIVEL 3 — Representación gráfica
+  { type:'sep', lv:3, xp:[1,2],
+    title:'NIVEL 3 — LA MAZMORRA',
+    subtitle:'Representar funciones en el plano',
+    desc:'En la mazmorra oscura solo se ven puntos de luz. Cada punto es un par (x, y). Únelos y verás la función.',
+    formula:'Representar (x, y): x en horizontal, y en vertical' },
+  { type:'q', lv:3, xp:[1,2], eq:1, total:3,
+    context:'Representa la función <strong>y = 2x</strong> para x = 0, 1, 2, 3.',
+    question:'¿Cómo queda la gráfica?',
+    visual: graphSVG({points:[],line:{m:2,b:0},xMax:4,yMax:8,label:'y = 2x',color:'#FF6600'}),
+    eqRaw:'Representa la función y igual a 2 por x para x igual a 0, 1, 2 y 3. ¿Qué forma tiene la gráfica?',
+    hint:'Calcula los puntos: (0,0), (1,2), (2,4), (3,6) y únelos' },
+  { type:'s', lv:3, xp:[1,2], eq:1, total:3,
+    solution:'Línea recta que pasa por el origen',
+    method:'(0,0)→(1,2)→(2,4)→(3,6) → recta ascendente',
+    visual: graphSVG({points:[[0,0],[1,2],[2,4],[3,6]],line:{m:2,b:0},xMax:4,yMax:8,label:'y = 2x ✓',color:'#00FF88'}) },
+
+  { type:'q', lv:3, xp:[1,2], eq:2, total:3,
+    context:'Identifica qué función corresponde a la tabla: (0,2), (1,4), (2,6).',
+    question:'¿Cuál es la expresión de la función?',
+    visual: graphSVG({points:[[0,2],[1,4],[2,6]],xMax:4,yMax:8,label:'¿y = ?',color:'#FF6600'}),
+    eqRaw:'Identifica qué función corresponde a los puntos 0,2 — 1,4 — 2,6.',
+    hint:'Mira cuánto sube y por cada unidad de x. Y cuando x=0, ¿cuánto vale y?' },
+  { type:'s', lv:3, xp:[1,2], eq:2, total:3,
+    solution:'y = 2x + 2',
+    method:'Sube 2 por cada x (pendiente=2). En x=0 vale 2 (ordenada=2)',
+    visual: graphSVG({points:[[0,2],[1,4],[2,6]],line:{m:2,b:2},xMax:4,yMax:10,label:'y = 2x + 2 ✓',color:'#00FF88'}) },
+
+  { type:'q', lv:3, xp:[1,2], eq:3, total:3,
+    context:'La función <strong>y = x + 1</strong>: ¿pasa por el punto (3, 4)?',
+    question:'Comprueba si (3, 4) pertenece a y = x + 1',
+    visual: graphSVG({points:[[3,4]],line:{m:1,b:1},xMax:5,yMax:8,label:'y = x + 1',color:'#FF6600'}),
+    eqRaw:'¿Pertenece el punto 3,4 a la función y igual a x más 1?',
+    hint:'Sustituye x=3 en y = x + 1. ¿Sale 4?' },
+  { type:'s', lv:3, xp:[1,2], eq:3, total:3,
+    solution:'✓ SÍ pertenece',
+    method:'y = 3 + 1 = 4  →  (3, 4) ✓ está en la recta' },
+
+  { type:'levelup', lv:4, xp:[1,2,3], cleared:3, next:4 },
+
+  // NIVEL 4 — Pendiente
+  { type:'sep', lv:4, xp:[1,2,3],
+    title:'NIVEL 4 — EL CASTILLO',
+    subtitle:'La pendiente de una función lineal',
+    desc:'La pendiente mide la inclinación de la función. Es la "velocidad" con la que sube o baja. Más pendiente = más poderoso.',
+    formula:'m = (y₂ − y₁) ÷ (x₂ − x₁)     En y = mx + b, m es la pendiente' },
+  { type:'q', lv:4, xp:[1,2,3], eq:1, total:3,
+    context:'Calcula la pendiente de la recta que pasa por <strong>(1, 3) y (3, 7)</strong>.',
+    question:'¿Cuál es la pendiente m?',
+    visual: graphSVG({points:[[1,3],[3,7]],line:{m:2,b:1},xMax:5,yMax:10,color:'#00FF88',label:'m = ?'}),
+    eqRaw:'Calcula la pendiente de la recta que pasa por los puntos 1,3 y 3,7.',
+    hint:'m = (7−3) ÷ (3−1) = 4 ÷ 2' },
+  { type:'s', lv:4, xp:[1,2,3], eq:1, total:3,
+    solution:'m = 2',
+    method:'m = (7−3) ÷ (3−1) = 4 ÷ 2 = 2' },
+
+  { type:'q', lv:4, xp:[1,2,3], eq:2, total:3,
+    context:'En la función <strong>y = 5x − 3</strong>, ¿cuál es la pendiente? ¿y la ordenada en el origen?',
+    question:'Identifica m y b en y = 5x − 3',
+    visual: graphSVG({points:[[1,2],[2,7]],line:{m:5,b:-3},xMax:4,yMax:10,color:'#00FF88',label:'y = 5x − 3'}),
+    eqRaw:'En la función y igual a 5 por x menos 3, ¿cuál es la pendiente y cuál es la ordenada en el origen?',
+    hint:'En y = mx + b, m es el coeficiente de x y b es el término independiente' },
+  { type:'s', lv:4, xp:[1,2,3], eq:2, total:3,
+    solution:'m = 5, b = −3',
+    method:'y = 5·x + (−3) → pendiente=5, corta eje y en y=−3' },
+
+  { type:'q', lv:4, xp:[1,2,3], eq:3, total:3,
+    context:'¿Cuál función tiene mayor pendiente: <strong>y = 3x</strong> o <strong>y = 5x</strong>?',
+    question:'Compara las pendientes e interpreta',
+    visual: graphSVG({points:[],line:{m:3,b:0},xMax:4,yMax:12,color:'#00FFFF',label:'azul: y=3x / verde: y=5x'}),
+    eqRaw:'¿Cuál función tiene mayor pendiente: y igual a 3 por x, o y igual a 5 por x?',
+    hint:'Mayor m → la recta es más inclinada (sube más rápido)' },
+  { type:'s', lv:4, xp:[1,2,3], eq:3, total:3,
+    solution:'y = 5x tiene mayor pendiente',
+    method:'m=5 > m=3 → y=5x sube más rápido y está más inclinada' },
+
+  { type:'levelup', lv:5, xp:[1,2,3,4], cleared:4, next:5 },
+
+  // NIVEL 5 — Ecuación y = mx + b
+  { type:'sep', lv:5, xp:[1,2,3,4],
+    title:'NIVEL 5 — EL TRONO',
+    subtitle:'La ecuación de la recta: y = mx + b',
+    desc:'El jefe final conoce la ecuación completa. m es la pendiente y b es donde corta el eje y. Con estos dos datos puedes dibujar cualquier recta.',
+    formula:'y = mx + b  →  m: pendiente     b: ordenada en el origen' },
+  { type:'q', lv:5, xp:[1,2,3,4], eq:1, total:3,
+    context:'Escribe la ecuación de la recta con <strong>pendiente 3</strong> que pasa por el punto <strong>(0, 2)</strong>.',
+    question:'¿Cuál es la ecuación y = mx + b?',
+    visual: graphSVG({points:[[0,2],[1,5],[2,8]],line:{m:3,b:2},xMax:4,yMax:12,color:'#FF44AA',label:'m=3, pasa por (0,2)'}),
+    eqRaw:'Escribe la ecuación de la recta con pendiente 3 que pasa por el origen en el punto 0,2.',
+    hint:'m = 3 y b = 2 (el punto (0,b) es donde corta el eje y)' },
+  { type:'s', lv:5, xp:[1,2,3,4], eq:1, total:3,
+    solution:'y = 3x + 2',
+    method:'m=3, b=2 → y = 3x + 2' },
+
+  { type:'q', lv:5, xp:[1,2,3,4], eq:2, total:3,
+    context:'La recta <strong>y = 2x + 1</strong>: ¿dónde corta el eje Y? ¿dónde corta el eje X?',
+    question:'Halla los puntos donde corta los ejes',
+    visual: graphSVG({points:[[0,1]],line:{m:2,b:1},xMax:5,yMax:10,color:'#FF44AA',label:'y = 2x + 1'}),
+    eqRaw:'La recta y igual a 2 por x más 1. ¿Dónde corta el eje Y y dónde corta el eje X?',
+    hint:'Eje Y: x=0 → y=b. Eje X: y=0 → 0=2x+1 → x=?' },
+  { type:'s', lv:5, xp:[1,2,3,4], eq:2, total:3,
+    solution:'Corta Y en (0,1) y X en (−0.5, 0)',
+    method:'x=0→y=1 | y=0→0=2x+1→x=−1/2=−0.5' },
+
+  { type:'q', lv:5, xp:[1,2,3,4], eq:3, total:3,
+    context:'Dos héroes viajan con y = 2x + 1 y y = 2x + 4. ¿Se cruzarán alguna vez?',
+    question:'Compara las dos rectas. ¿Son paralelas?',
+    visual: graphSVG({points:[[0,1],[0,4]],line:{m:2,b:1},xMax:5,yMax:12,color:'#FF44AA',label:'y=2x+1 vs y=2x+4'}),
+    eqRaw:'Dos funciones: y igual a 2 por x más 1 y y igual a 2 por x más 4. ¿Son paralelas? ¿Se cruzarán alguna vez?',
+    hint:'Si tienen la misma pendiente m, las rectas nunca se cruzan' },
+  { type:'s', lv:5, xp:[1,2,3,4], eq:3, total:3,
+    solution:'Son PARALELAS — nunca se cruzan',
+    method:'Misma pendiente m=2, distinta ordenada → rectas paralelas' },
+
+  { type:'victory', xp:[1,2,3,4,5] }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function pixelBorder() {
+  return `<div class="pixel-border"></div>`;
+}
+function tracker(activeLv, xpLvs=[]) {
+  return `<div class="tracker">` +
+    [1,2,3,4,5].map(l=>{
+      const done  = xpLvs.includes(l);
+      const active= activeLv===l;
+      const cls   = done?'done':(active?'active':'');
+      return `<div class="level-btn ${cls}">
+        <div class="lv-num">${done?'✓':LV_ICONS[l]}</div>
+        <div class="lv-label">${LV_LABELS[l]}</div>
+      </div>`;
+    }).join('') +
+  `</div>`;
+}
+function lvBand(lv) {
+  const c=LV_COLORS[lv];
+  return `<div class="level-band" style="top:76px;color:${c};background:linear-gradient(90deg,transparent,${c}15,${c}28,${c}15,transparent);">
+    ${LV_NAMES[lv]} &nbsp;·&nbsp; ${LV_ZONES[lv]}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERERS
+// ═══════════════════════════════════════════════════════════════
+function renderCover() {
+  return `
+  <div class="rpg-bg"></div><div class="grid-floor"></div>
+  ${pixelBorder()}
+  <div style="position:absolute;top:42px;left:0;right:0;text-align:center;">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:5px;color:var(--muted);margin-bottom:12px;">◆ ACADEMIA DE MATEMÁTICAS RPG ◆</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:46px;line-height:1.2;color:var(--cyan);text-shadow:0 0 30px rgba(0,255,255,.6);">MISIÓN XP</div>
+    <div style="width:480px;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);margin:18px auto;"></div>
+    <div style="font-family:'VT323',monospace;font-size:30px;color:var(--white);letter-spacing:3px;">FUNCIONES Y PROPORCIONALIDAD</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);margin-top:10px;">1.º ESO &nbsp;·&nbsp; LEVEL 1 → 5 &nbsp;·&nbsp; 15 MISIONES</div>
+  </div>
+  <!-- Hero sprite -->
+  <div class="float-anim" style="position:absolute;top:260px;left:0;right:0;text-align:center;font-size:80px;">🧙‍♂️</div>
+  <!-- Stats panel -->
+  <div class="rpg-panel" data-label="STATS" style="position:absolute;bottom:72px;left:120px;right:120px;padding:16px 24px;">
+    <div style="display:flex;justify-content:space-around;align-items:center;">
+      ${[['⚔️','5 NIVELES'],['📊','15 MISIONES'],['📈','FUNCIONES'],['🔢','y = mx + b']].map(([i,t])=>`
+      <div style="text-align:center;">
+        <div style="font-size:28px;">${i}</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--cyan);margin-top:4px;">${t}</div>
+      </div>`).join('<div style="width:1px;height:36px;background:rgba(0,255,255,.15);"></div>')}
+    </div>
+    <div style="margin-top:12px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">PROGRESO DE MISIÓN</div>
+      <div class="xp-track"><div class="xp-fill" style="width:2%;"></div></div>
+    </div>
+  </div>
+  <div id="click-hint">— PULSA START / CLIC PARA COMENZAR —</div>`;
+}
+
+function renderStory() {
+  return `
+  <div class="rpg-bg"></div>
+  ${pixelBorder()}
+  <div style="position:absolute;top:22px;left:0;right:0;text-align:center;">
+    <span class="badge badge-purple">◆ HISTORIA ◆</span>
+  </div>
+  <!-- Character panel -->
+  <div class="rpg-panel" style="position:absolute;top:64px;left:60px;width:220px;bottom:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;">
+    <div style="font-size:72px;" class="float-anim">🧙‍♂️</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--cyan);">SIGMA</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">LV. 1 APRENDIZ</div>
+    <div style="width:80%;"><div style="font-size:9px;color:var(--muted);margin-bottom:3px;">HP ████████░░</div><div style="font-size:9px;color:var(--purple);margin-bottom:3px;">MP ██████████</div><div style="font-size:9px;color:var(--gold);">XP 0 / 500</div></div>
+  </div>
+  <!-- Dialogue box -->
+  <div class="rpg-panel" style="position:absolute;top:64px;left:300px;right:60px;padding:28px 32px;">
+    <div style="font-family:'VT323',monospace;font-size:22px;color:var(--white);line-height:1.7;">
+      <p style="color:var(--cyan);">Bienvenido al Reino de las Funciones.</p><br>
+      <p>El malvado <strong style="color:var(--red);">Caos-X</strong> ha destruido todas las relaciones entre variables. Nadie sabe cuánto cuesta nada, ni cuánto tarda nadie en llegar a ningún sitio.</p><br>
+      <p>Tú, <strong style="color:var(--gold);">aprendiz Sigma</strong>, debes resolver las 15 misiones de los 5 niveles del reino para restaurar el orden matemático.</p><br>
+      <p style="color:var(--gold);">Cada misión completada te da <strong>XP</strong> y te acerca al nivel final.</p>
+    </div>
+  </div>
+  <div class="rpg-panel rpg-panel-gold" style="position:absolute;bottom:20px;left:300px;right:60px;height:44px;display:flex;align-items:center;justify-content:center;">
+    <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--gold);">🚨 OBJETIVO: Derrotar a Caos-X resolviendo y = mx + b</span>
+  </div>
+  <div id="click-hint">— CLIC PARA CONTINUAR —</div>`;
+}
+
+function renderInstructions() {
+  const steps = [
+    ['📈','FUNCIONES','Una función relaciona cada valor de x con un único valor de y. Es el mapa del reino.'],
+    ['🔢','TABLAS','Sustituye cada x en la expresión para obtener y. Así construyes la tabla de valores.'],
+    ['📊','GRÁFICAS','Representa los pares (x, y) en el plano y únelos. Obtienes la gráfica de la función.'],
+    ['⚔️','MISIÓN','Cada nivel tiene 3 misiones. Calcula antes de ver la solución para ganar el XP.'],
+  ];
+  return `
+  <div class="rpg-bg"></div>
+  ${pixelBorder()}
+  <div style="position:absolute;top:22px;left:0;right:0;text-align:center;">
+    <span class="badge badge-cyan">◆ MANUAL DEL HÉROE ◆</span>
+  </div>
+  <div style="position:absolute;top:72px;left:60px;right:60px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    ${steps.map(([i,t,d])=>`
+    <div class="rpg-panel" style="padding:20px 22px;display:flex;gap:14px;">
+      <div style="font-size:32px;flex-shrink:0;">${i}</div>
+      <div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:var(--cyan);margin-bottom:8px;">${t}</div>
+        <div style="font-family:'VT323',monospace;font-size:19px;color:var(--white);line-height:1.5;">${d}</div>
+      </div>
+    </div>`).join('')}
+  </div>
+  <div class="rpg-panel" style="position:absolute;bottom:56px;left:60px;right:60px;padding:12px 24px;">
+    <div style="display:flex;justify-content:space-around;align-items:center;">
+      ${[['1','Proporcionalidad'],['2','Tablas'],['3','Gráficas'],['4','Pendiente'],['5','y=mx+b']].map(([n,l],i)=>`
+      <div style="text-align:center;">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:${LV_COLORS[i+1]};">LV.${n}</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px;">${l}</div>
+      </div>`).join('<span style="color:var(--muted);font-size:10px;">›</span>')}
+    </div>
+  </div>
+  <div id="click-hint">— CLIC PARA COMENZAR LA MISIÓN —</div>`;
+}
+
+function renderSep(sl) {
+  const c = LV_COLORS[sl.lv];
+  return `
+  <div class="rpg-bg"></div><div class="grid-floor"></div>
+  ${pixelBorder()}
+  ${tracker(sl.lv, sl.xp)}
+  <div style="position:absolute;top:10px;left:20px;">
+    <span class="badge" style="background:${c}18;color:${c};border-color:${c}66;">${LV_ICONS[sl.lv]} ${LV_NAMES[sl.lv]}</span>
+  </div>
+  <div style="position:absolute;top:82px;left:0;right:0;text-align:center;">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:4px;color:${c};opacity:.8;margin-bottom:10px;">[ ${LV_ZONES[sl.lv]} ]</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:36px;color:${c};text-shadow:0 0 25px ${c}66;line-height:1.3;">${sl.title}</div>
+    <div style="width:400px;height:2px;background:${c};margin:16px auto;opacity:.5;"></div>
+    <div style="font-family:'VT323',monospace;font-size:28px;color:var(--white);">${sl.subtitle}</div>
+  </div>
+  <div class="rpg-panel" style="position:absolute;top:310px;left:120px;right:120px;padding:20px 28px;border-color:${c}55;">
+    <div style="font-family:'VT323',monospace;font-size:21px;color:var(--white);text-align:center;line-height:1.6;">${sl.desc}</div>
+  </div>
+  <div style="position:absolute;bottom:68px;left:0;right:0;text-align:center;">
+    <div class="formula-box">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:5px;">FÓRMULA</div>
+      <div style="font-family:'VT323',monospace;font-size:24px;color:var(--gold);">${sl.formula}</div>
+    </div>
+  </div>
+  <div id="click-hint">— CLIC PARA INICIAR NIVEL —</div>`;
+}
+
+function renderQuestion(sl) {
+  const c = LV_COLORS[sl.lv];
+  return `
+  <div class="rpg-bg"></div>
+  ${pixelBorder()}
+  ${tracker(sl.lv, sl.xp)}
+  ${lvBand(sl.lv)}
+  <div style="position:absolute;top:118px;left:26px;right:26px;display:flex;justify-content:space-between;">
+    <span class="badge" style="background:${c}15;color:${c};border-color:${c}55;">⚔ MISIÓN ${sl.eq} / ${sl.total}</span>
+    <span class="badge badge-gold">✏ TU TURNO</span>
+  </div>
+  <!-- Context -->
+  <div class="rpg-panel" style="position:absolute;top:160px;left:26px;right:26px;padding:12px 20px;border-color:${c}44;">
+    <div style="font-family:'VT323',monospace;font-size:20px;color:var(--white);line-height:1.5;">${sl.context}</div>
+  </div>
+  <!-- Two columns -->
+  <div style="position:absolute;top:238px;left:26px;right:26px;display:flex;gap:14px;height:294px;">
+    <!-- Visual/diagram -->
+    <div class="rpg-panel" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-color:${c}66;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:${c};letter-spacing:2px;margin-bottom:8px;">[ DATOS ]</div>
+      ${sl.visual}
+    </div>
+    <!-- Question box -->
+    <div class="rpg-panel" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:18px;border-color:${c}44;">
+      <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:${c};text-align:center;line-height:1.6;">${sl.question}</div>
+      <div style="width:80%;height:1px;background:rgba(0,255,255,.15);"></div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">RESPUESTA: <span class="blink">_</span></div>
+    </div>
+  </div>
+  <!-- Hint -->
+  <div class="rpg-panel rpg-panel-green" style="position:absolute;bottom:50px;left:26px;right:26px;height:48px;display:flex;align-items:center;padding:0 18px;gap:10px;">
+    <span style="font-size:16px;">💡</span>
+    <span style="font-family:'VT323',monospace;font-size:19px;color:rgba(0,255,136,.9);">${sl.hint}</span>
+  </div>
+  <div id="click-hint">— CLIC PARA VER LA SOLUCIÓN —</div>`;
+}
+
+function renderSolution(sl) {
+  const c = LV_COLORS[sl.lv];
+  const isLast = sl.eq === sl.total;
+  const hasVis = !!sl.visual;
+  return `
+  <div class="rpg-bg"></div>
+  ${pixelBorder()}
+  ${tracker(sl.lv, sl.xp)}
+  ${lvBand(sl.lv)}
+  <div style="position:absolute;top:118px;left:26px;right:26px;display:flex;justify-content:space-between;">
+    <span class="badge badge-cyan">⚔ MISIÓN ${sl.eq} / ${sl.total}</span>
+    <span class="badge badge-green">✅ +XP GANADO</span>
+  </div>
+  ${hasVis?`
+  <div style="position:absolute;top:164px;left:26px;right:26px;display:flex;gap:14px;height:360px;">
+    <div class="rpg-panel" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-color:${c}44;opacity:.8;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:6px;">SOLUCIÓN VISUAL</div>
+      ${sl.visual}
+    </div>
+    <div class="rpg-panel rpg-panel-green" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;box-shadow:0 0 30px rgba(0,255,136,.25);">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--green);letter-spacing:2px;">[ RESPUESTA CORRECTA ]</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:18px;color:var(--green);text-align:center;line-height:1.5;text-shadow:0 0 15px var(--green);">${sl.solution}</div>
+      <div style="width:80%;height:1px;background:rgba(0,255,136,.3);"></div>
+      <div style="font-family:'VT323',monospace;font-size:17px;color:rgba(0,255,136,.8);text-align:center;">${sl.method}</div>
+    </div>
+  </div>`:
+  `<div class="rpg-panel rpg-panel-green" style="position:absolute;top:164px;left:26px;right:26px;height:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;box-shadow:0 0 30px rgba(0,255,136,.2);">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--green);letter-spacing:3px;">[ RESPUESTA CORRECTA ]</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:22px;color:var(--green);text-shadow:0 0 20px var(--green);text-align:center;line-height:1.5;">${sl.solution}</div>
+    <div style="width:60%;height:1px;background:rgba(0,255,136,.3);"></div>
+    <div style="font-family:'VT323',monospace;font-size:22px;color:rgba(0,255,136,.8);">${sl.method}</div>
+  </div>`}
+  <div class="rpg-panel" style="position:absolute;bottom:50px;left:26px;right:26px;height:46px;display:flex;align-items:center;padding:0 18px;background:rgba(0,255,136,.06);">
+    <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--green);">🔬</span>
+    <span style="font-family:'VT323',monospace;font-size:18px;color:rgba(0,255,136,.8);margin-left:8px;">${sl.method}</span>
+  </div>
+  <div id="click-hint" style="color:${isLast?'var(--green)':'var(--muted)'};">
+    — ${isLast?'¡NIVEL COMPLETADO! ▶ SUBIR DE NIVEL':`SIGUIENTE MISIÓN ${sl.eq+1}`} —
+  </div>`;
+}
+
+function renderLevelUp(sl) {
+  const c = LV_COLORS[sl.next];
+  return `
+  <div class="rpg-bg"></div><div class="grid-floor"></div>
+  ${pixelBorder()}
+  ${tracker(sl.next, sl.xp)}
+  <!-- Flash frame -->
+  <div style="position:absolute;inset:18px;border:3px solid var(--gold);box-shadow:0 0 40px rgba(255,215,0,.5);pointer-events:none;z-index:2;animation:pulse-cyan 2s infinite;"></div>
+  <div style="position:absolute;top:110px;left:0;right:0;text-align:center;font-size:72px;animation:level-up 1.5s ease-in-out infinite;">⬆️</div>
+  <div style="position:absolute;top:200px;left:0;right:0;text-align:center;">
+    <div style="font-family:'Press Start 2P',monospace;font-size:36px;color:var(--gold);text-shadow:0 0 30px rgba(255,215,0,.8);line-height:1.3;">LEVEL UP!</div>
+    <div style="font-family:'VT323',monospace;font-size:28px;color:var(--white);margin-top:10px;">¡Nivel ${sl.cleared} completado! +500 XP</div>
+  </div>
+  <div style="position:absolute;top:340px;left:200px;right:200px;">
+    <div class="xp-track" style="height:14px;">
+      <div class="xp-fill" style="width:${sl.cleared/5*100}%;"></div>
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;text-align:center;">${sl.cleared*500} / 2500 XP</div>
+  </div>
+  <div class="rpg-panel" style="position:absolute;top:404px;left:220px;right:220px;height:56px;display:flex;align-items:center;justify-content:center;border-color:${c};background:${c}15;">
+    <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:${c};">${LV_ICONS[sl.next]} ${LV_NAMES[sl.next]}: ${LV_LABELS[sl.next]}</div>
+  </div>
+  <div id="click-hint" style="color:var(--gold);">— CLIC PARA CONTINUAR AL SIGUIENTE NIVEL —</div>`;
+}
+
+function renderVictory() {
+  return `
+  <div class="rpg-bg"></div><div class="grid-floor"></div>
+  ${pixelBorder()}
+  ${tracker(0,[1,2,3,4,5])}
+  <div style="position:absolute;inset:18px;border:2px solid var(--gold);box-shadow:0 0 50px rgba(255,215,0,.4);pointer-events:none;z-index:2;animation:pulse-cyan 2s infinite;"></div>
+  <div style="position:absolute;top:80px;left:0;right:0;text-align:center;">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:5px;color:var(--gold);margin-bottom:10px;">◆ MISIÓN COMPLETADA ◆</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:40px;color:var(--cyan);text-shadow:0 0 30px rgba(0,255,255,.7);line-height:1.3;">¡¡ CAOS-X<br>DERROTADO !!</div>
+  </div>
+  <div style="position:absolute;top:286px;left:160px;right:160px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);"></div>
+  <div style="position:absolute;top:302px;left:100px;right:100px;text-align:center;">
+    <div style="font-family:'VT323',monospace;font-size:22px;color:var(--white);line-height:1.7;">El héroe Sigma ha restaurado el orden matemático del reino.<br>Todas las funciones vuelven a funcionar correctamente.</div>
+  </div>
+  <div style="position:absolute;top:394px;left:0;right:0;text-align:center;font-size:44px;filter:drop-shadow(0 0 10px var(--gold));">⭐ ⭐ ⭐ ⭐ ⭐</div>
+  <div style="position:absolute;top:458px;left:200px;right:200px;">
+    <div class="xp-track" style="height:14px;"><div class="xp-fill" style="width:100%;"></div></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--cyan);margin-top:4px;text-align:center;">2500 / 2500 XP ◆ RANGO: MAESTRO DE FUNCIONES</div>
+  </div>
+  <div class="rpg-panel rpg-panel-green" style="position:absolute;bottom:56px;left:240px;right:240px;height:50px;display:flex;align-items:center;justify-content:center;">
+    <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--green);letter-spacing:1px;">5/5 NIVELES ✓ · 15/15 MISIONES ✓ · y=mx+b DOMINADA</span>
+  </div>
+  <div class="rpg-panel rpg-panel-gold" style="position:absolute;bottom:14px;left:100px;right:100px;padding:8px 20px;height:42px;display:flex;align-items:center;justify-content:center;">
+    <div style="font-family:'VT323',monospace;font-size:20px;color:var(--gold);font-style:italic;">"El que controla las funciones, controla el universo." — Maestro Sigma</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENGINE
+// ═══════════════════════════════════════════════════════════════
+const stage=document.getElementById('stage');
+let current=0, slideEls=[];
+
+function getHTML(sl) {
+  switch(sl.type){
+    case'cover':        return renderCover();
+    case'story':        return renderStory();
+    case'instructions': return renderInstructions();
+    case'sep':          return renderSep(sl);
+    case'q':            return renderQuestion(sl);
+    case's':            return renderSolution(sl);
+    case'levelup':      return renderLevelUp(sl);
+    case'victory':      return renderVictory();
+    default: return '';
+  }
+}
+
+function buildAll(){
+  stage.innerHTML=''; slideEls=[];
+  SLIDES.forEach(sl=>{ const el=document.createElement('div'); el.className='slide'; el.innerHTML=getHTML(sl); stage.appendChild(el); slideEls.push(el); });
+}
+
+function goTo(idx){
+  if(idx<0||idx>=SLIDES.length) return;
+  slideEls[current].classList.remove('active');
+  current=idx; slideEls[current].classList.add('active');
+  updateUI();
+  setTimeout(()=>speak(getSpeechText(SLIDES[current])),300);
+}
+
+function updateUI(){
+  document.getElementById('slide-counter').textContent=`${current+1} / ${SLIDES.length}`;
+  document.getElementById('progress-line').style.width=((current+1)/SLIDES.length*100)+'%';
+}
+
+function scaleStage(){
+  const scale=Math.min(window.innerWidth/1280,window.innerHeight/720);
+  const ox=(window.innerWidth-1280*scale)/2, oy=(window.innerHeight-720*scale)/2;
+  stage.style.transform=`translate(${ox}px,${oy}px) scale(${scale})`;
+}
+
+// ── TTS ──────────────────────────────────────────────────────
+const synth=window.speechSynthesis;
+let voiceMuted=false, heroVoice=null, speakRate=0.85;
+function stripHTML(h){return h.replace(/<[^>]*>/g,'').replace(/&[a-z#0-9]+;/g,' ').replace(/\s+/g,' ').trim();}
+function getSpeechText(sl){
+  switch(sl.type){
+    case'cover':        return 'Misión XP. Funciones y proporcionalidad para primero de la E.S.O. Pulsa start para comenzar.';
+    case'story':        return 'El malvado Caos-X ha destruido todas las relaciones entre variables. Tú, aprendiz Sigma, debes resolver las 15 misiones para restaurar el orden matemático.';
+    case'instructions': return 'Manual del héroe. Cinco niveles: proporcionalidad, tablas, gráficas, pendiente y la ecuación y igual a m por x más b. Calcula siempre antes de ver la solución para ganar XP.';
+    case'sep': return `${sl.title}. ${stripHTML(sl.subtitle)}. ${stripHTML(sl.desc)}. Fórmula: ${sl.formula.replace(/·/g,' por ').replace(/=/g,' igual a ')}.`;
+    case'q':  return `Misión ${sl.eq} de ${sl.total}. ${stripHTML(sl.context)}. ${sl.eqRaw}. Pista: ${sl.hint.replace(/→/g,' entonces ').replace(/·/g,' por ').replace(/÷/g,' entre ')}.`;
+    case's':  return `Respuesta correcta. ${sl.solution}. Método: ${sl.method.replace(/·/g,' por ').replace(/÷/g,' entre ').replace(/=/g,' igual a ').replace(/→/g,' entonces ')}.`;
+    case'levelup': return `¡Level up! ¡Nivel ${sl.cleared} completado! Quinientos puntos de experiencia ganados. ¡Avanzas al nivel ${sl.next}!`;
+    case'victory': return '¡Misión completada! ¡Caos-X ha sido derrotado! El héroe Sigma ha restaurado el orden matemático del reino. Dos mil quinientos puntos de experiencia. Rango: Maestro de Funciones.';
+    default: return '';
+  }
+}
+function loadVoice(){
+  const voices=synth.getVoices(); if(!voices.length) return;
+  const pref=[v=>/google/i.test(v.name)&&/es/i.test(v.lang),v=>/es[-_]/i.test(v.lang),v=>/es/i.test(v.lang)];
+  for(const t of pref){const m=voices.find(t); if(m){heroVoice=m; break;}}
+}
+synth.onvoiceschanged=loadVoice; loadVoice();
+function speak(text){
+  synth.cancel(); if(voiceMuted||!text) return;
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang='es-ES'; utt.rate=speakRate; utt.pitch=0.6; utt.volume=1;
+  if(heroVoice) utt.voice=heroVoice;
+  const btn=document.getElementById('btn-voice'), bar=document.getElementById('speak-bar');
+  btn.classList.add('speaking'); bar.style.display='block';
+  utt.onend=utt.onerror=()=>{btn.classList.remove('speaking'); bar.style.display='none';};
+  synth.speak(utt);
+}
+document.getElementById('btn-voice').addEventListener('click',e=>{
+  e.stopPropagation(); voiceMuted=!voiceMuted;
+  const btn=document.getElementById('btn-voice');
+  if(voiceMuted){synth.cancel();btn.textContent='🔇';btn.classList.remove('speaking');btn.classList.add('muted');document.getElementById('speak-bar').style.display='none';}
+  else{btn.textContent='🔊';btn.classList.remove('muted');speak(getSpeechText(SLIDES[current]));}
+});
+document.getElementById('voice-speed').addEventListener('change',e=>{e.stopPropagation();speakRate=parseFloat(e.target.value);if(!voiceMuted)speak(getSpeechText(SLIDES[current]));});
+
+// ── MÚSICA 8-BIT (chiptune Web Audio API) ─────────────────────
+let musicEnabled=false, musicAudio=null;
+function bufToWav(buf,sr){
+  const nCh=buf.numberOfChannels,len=buf.length*nCh*2+44,ab=new ArrayBuffer(len),v=new DataView(ab);
+  let p=0;
+  const u16=n=>{v.setUint16(p,n,true);p+=2;}, u32=n=>{v.setUint32(p,n,true);p+=4;}, s16=n=>{v.setInt16(p,Math.max(-32768,Math.min(32767,(n<0?n*32768:n*32767)|0)),true);p+=2;};
+  u32(0x46464952);u32(len-8);u32(0x45564157);u32(0x20746d66);u32(16);u16(1);u16(nCh);u32(sr);u32(sr*nCh*2);u16(nCh*2);u16(16);u32(0x61746164);u32(len-p-4);
+  const chs=Array.from({length:nCh},(_,i)=>buf.getChannelData(i));
+  for(let i=0;i<buf.length;i++) for(let c=0;c<nCh;c++) s16(chs[c][i]);
+  return new Blob([ab],{type:'audio/wav'});
+}
+function generate8bit(){
+  const ctx=new(window.AudioContext||window.webkitAudioContext)();
+  const sr=ctx.sampleRate, dur=28;
+  const buf=ctx.createBuffer(2,sr*dur,sr);
+  // C major pentatonic for "heroic" feel: C4 E4 G4 A4 C5
+  const melody=[261.63,329.63,392,440,523.25,392,329.63,261.63,
+                329.63,440,523.25,440,392,329.63,261.63,261.63];
+  const bass  =[130.81,130.81,196,196, 164.81,164.81,196,196,
+                130.81,130.81,196,196, 164.81,164.81,130.81,130.81];
+  const beatDur=dur/melody.length;
+  for(let ch=0;ch<2;ch++){
+    const d=buf.getChannelData(ch);
+    for(let i=0;i<d.length;i++){
+      const t=i/sr;
+      const beat=Math.floor(t/beatDur)%melody.length;
+      const bT=(t%beatDur)/beatDur;
+      // Square wave melody (chiptune)
+      const mFreq=melody[beat];
+      const mEnv=Math.exp(-bT*4)*Math.min(1,bT*60);
+      const mSq=(Math.sin(2*Math.PI*mFreq*t)>0?1:-1)*mEnv*0.06;
+      // Triangle bass
+      const bFreq=bass[beat];
+      const bTri=(2/Math.PI)*Math.asin(Math.sin(2*Math.PI*bFreq*t))*0.05;
+      // Arp (high square octave)
+      const arpFreq=mFreq*2;
+      const arpBeat=Math.floor(t/(beatDur/4))%4;
+      const arpEnv=arpBeat===0?Math.exp(-(t%(beatDur/4))/(beatDur/4)*6):0;
+      const arp=(Math.sin(2*Math.PI*arpFreq*t)>0?1:-1)*arpEnv*0.025;
+      // Noise snare every 2 beats
+      const snareOn=(Math.floor(t/beatDur)%2===1&&bT<0.08);
+      const snare=snareOn?(Math.random()-.5)*0.04:0;
+      // Env
+      const env=Math.min(1,Math.min(t*2,(dur-t)*2));
+      d[i]=(mSq+bTri+arp+snare)*env*(ch===0?1:0.88);
+    }
+  }
+  const blob=bufToWav(buf,sr);
+  const audio=new Audio(URL.createObjectURL(blob));
+  audio.loop=true; audio.volume=0.2; return audio;
+}
+document.getElementById('btn-music').addEventListener('click',e=>{
+  e.stopPropagation(); musicEnabled=!musicEnabled;
+  const btn=document.getElementById('btn-music');
+  if(musicEnabled){
+    if(!musicAudio) musicAudio=generate8bit();
+    musicAudio.play().catch(()=>{});
+    btn.textContent='🔊'; btn.style.color='var(--gold)';
+  } else {
+    if(musicAudio) musicAudio.pause();
+    btn.textContent='🎵'; btn.style.color='';
+  }
+});
+
+// ── CONTROLS ─────────────────────────────────────────────────
+document.getElementById('btn-fs').addEventListener('click',e=>{e.stopPropagation();if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();});
+document.getElementById('btnPrev').addEventListener('click',e=>{e.stopPropagation();goTo(current-1);});
+document.getElementById('btnNext').addEventListener('click',e=>{e.stopPropagation();goTo(current+1);});
+document.addEventListener('click',()=>goTo(current+1));
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();goTo(current+1);}
+  if(e.key==='ArrowLeft'){e.preventDefault();goTo(current-1);}
+  if(e.key==='r'||e.key==='R') goTo(0);
+  if(e.key==='m'||e.key==='M') document.getElementById('btn-voice').click();
+  if(e.key==='n'||e.key==='N') document.getElementById('btn-music').click();
+  if(e.key==='f'||e.key==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+});
+window.addEventListener('resize',scaleStage);
+buildAll(); scaleStage(); goTo(0);
+</script>
+</body>
+</html>

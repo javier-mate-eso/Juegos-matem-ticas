@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Operación Abismo — Números Enteros</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Exo+2:ital,wght@0,300;0,600;1,300&family=Share+Tech+Mono&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --abyss:  #020810;
+  --deep:   #040E1E;
+  --deep2:  #06152A;
+  --deep3:  #0A1F3A;
+  --teal:   #00E5CC;
+  --teal2:  #00B8A0;
+  --bio:    #39FF14;    /* bioluminescent green */
+  --bio2:   #20CC00;
+  --sonar:  #00FF88;
+  --amber:  #FFB300;
+  --red:    #FF3355;
+  --white:  #D8F0F0;
+  --muted:  #2A4A5A;
+  --neg:    #FF6B6B;    /* negative numbers */
+  --pos:    #6BFF9E;    /* positive numbers */
+  --zero:   #FFD700;    /* zero */
+  --m1:#00E5CC; --m2:#39FF14; --m3:#FF6B6B; --m4:#FFB300; --m5:#9B59B6;
+}
+html,body{width:100%;height:100%;background:#000;overflow:hidden;cursor:pointer;}
+#stage{position:absolute;width:1280px;height:720px;transform-origin:0 0;overflow:hidden;font-family:'Rajdhani',sans-serif;}
+
+/* ── DEEP SEA BG ── */
+.sea-bg{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%, #061830 0%, #020810 60%);
+}
+/* Bioluminescent particles */
+.sea-bg::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    radial-gradient(1px 1px at 12% 25%, rgba(0,229,204,.7) 0%,transparent 100%),
+    radial-gradient(2px 2px at 28% 60%, rgba(57,255,20,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 45% 15%, rgba(0,229,204,.6) 0%,transparent 100%),
+    radial-gradient(1px 1px at 62% 72%, rgba(57,255,20,.4) 0%,transparent 100%),
+    radial-gradient(2px 2px at 78% 40%, rgba(0,229,204,.7) 0%,transparent 100%),
+    radial-gradient(1px 1px at 90% 85%, rgba(57,255,20,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 8%  80%, rgba(0,229,204,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 55% 92%, rgba(57,255,20,.6) 0%,transparent 100%),
+    radial-gradient(2px 2px at 36% 35%, rgba(0,229,204,.4) 0%,transparent 100%),
+    radial-gradient(1px 1px at 72% 18%, rgba(57,255,20,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 18% 50%, rgba(0,229,204,.6) 0%,transparent 100%),
+    radial-gradient(2px 2px at 84% 62%, rgba(57,255,20,.4) 0%,transparent 100%),
+    radial-gradient(1px 1px at 50% 48%, rgba(0,229,204,.5) 0%,transparent 100%),
+    radial-gradient(1px 1px at 95% 30%, rgba(57,255,20,.6) 0%,transparent 100%),
+    radial-gradient(1px 1px at 3%  10%, rgba(0,229,204,.7) 0%,transparent 100%);
+  animation:bio-pulse 6s ease-in-out infinite alternate;
+}
+@keyframes bio-pulse{from{opacity:.6}to{opacity:1}}
+/* Scan lines */
+.sea-bg::after{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px);
+  pointer-events:none;
+}
+
+/* ── SLIDES ── */
+.slide{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease;}
+.slide.active{opacity:1;pointer-events:all;}
+
+/* ── SONAR BORDER ── */
+.sonar-border{
+  position:absolute;inset:14px;
+  border:2px solid rgba(0,229,204,.4);
+  box-shadow:0 0 0 1px rgba(0,229,204,.1),0 0 30px rgba(0,229,204,.2),inset 0 0 40px rgba(0,0,0,.5);
+  pointer-events:none;z-index:2;
+}
+/* corner brackets */
+.cb{position:absolute;width:18px;height:18px;pointer-events:none;z-index:3;}
+.cb.tl{top:14px;left:14px;border-top:2px solid var(--teal);border-left:2px solid var(--teal);}
+.cb.tr{top:14px;right:14px;border-top:2px solid var(--teal);border-right:2px solid var(--teal);}
+.cb.bl{bottom:14px;left:14px;border-bottom:2px solid var(--teal);border-left:2px solid var(--teal);}
+.cb.br{bottom:14px;right:14px;border-bottom:2px solid var(--teal);border-right:2px solid var(--teal);}
+
+/* ── DEPTH TRACKER ── */
+.tracker{
+  position:absolute;top:0;left:0;right:0;height:62px;
+  background:rgba(2,8,16,.97);
+  border-bottom:2px solid rgba(0,229,204,.2);
+  display:flex;align-items:center;justify-content:center;
+  gap:8px;padding:0 16px;z-index:10;
+}
+.depth-btn{
+  width:138px;height:48px;
+  border:1px solid rgba(42,74,90,.5);
+  background:rgba(4,14,30,.8);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;transition:all .4s;border-radius:2px;
+}
+.depth-btn.active{background:rgba(0,229,204,.12);border-color:var(--teal);box-shadow:0 0 14px rgba(0,229,204,.3);}
+.depth-btn.clear {background:rgba(57,255,20,.08);border-color:var(--bio2);}
+.dp-icon{font-size:15px;}
+.dp-label{font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;}
+.depth-btn.active .dp-label,.depth-btn.clear .dp-label{color:rgba(216,240,240,.7);}
+
+/* ── PANELS ── */
+.hud{background:rgba(4,14,30,.82);border:1px solid rgba(0,229,204,.25);box-shadow:0 0 20px rgba(0,229,204,.08);position:relative;}
+.hud::before{content:attr(data-label);position:absolute;top:-10px;left:14px;background:var(--deep);color:var(--teal2);font-size:9px;letter-spacing:3px;padding:0 8px;font-family:'Share Tech Mono',monospace;}
+.hud-bio{background:rgba(0,20,10,.82);border:1.5px solid var(--bio2);box-shadow:0 0 20px rgba(57,255,20,.15);}
+.hud-warn{background:rgba(30,5,8,.82);border:1.5px solid rgba(255,51,85,.5);}
+.hud-amber{background:rgba(25,18,0,.82);border:1px solid rgba(255,179,0,.4);}
+
+/* ── NUMBER LINE SVG helper (built inline) ── */
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:4px 12px;font-size:10px;letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.badge-teal  {background:rgba(0,229,204,.12);color:var(--teal);border:1px solid rgba(0,229,204,.4);}
+.badge-bio   {background:rgba(57,255,20,.1); color:var(--bio); border:1px solid rgba(57,255,20,.4);}
+.badge-red   {background:rgba(255,51,85,.12);color:var(--neg); border:1px solid rgba(255,51,85,.4);}
+.badge-amber {background:rgba(255,179,0,.12);color:var(--amber);border:1px solid rgba(255,179,0,.4);}
+
+/* ── DEPTH BAND ── */
+.depth-band{position:absolute;left:26px;right:26px;height:28px;display:flex;align-items:center;justify-content:center;font-size:10px;letter-spacing:3px;font-family:'Share Tech Mono',monospace;border-top:1px solid rgba(0,229,204,.1);border-bottom:1px solid rgba(0,229,204,.1);}
+
+/* ── FORMULA BOX ── */
+.formula-box{background:rgba(0,8,20,.8);border:2px solid var(--teal);box-shadow:0 0 18px rgba(0,229,204,.2);padding:10px 22px;display:inline-block;}
+
+/* ── NUMBER DISPLAY ── */
+.num-pos{color:var(--pos);text-shadow:0 0 12px rgba(107,255,158,.6);font-weight:700;}
+.num-neg{color:var(--neg);text-shadow:0 0 12px rgba(255,107,107,.6);font-weight:700;}
+.num-zero{color:var(--zero);text-shadow:0 0 12px rgba(255,215,0,.6);font-weight:700;}
+
+/* ── ANIMATIONS ── */
+@keyframes sonar-ping{0%,100%{box-shadow:0 0 0 rgba(0,229,204,.4)}50%{box-shadow:0 0 40px rgba(0,229,204,.6)}}
+@keyframes bubble-up{0%{transform:translateY(0) scale(1);opacity:.7}100%{transform:translateY(-120px) scale(.5);opacity:0}}
+@keyframes float-sub{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-10px) rotate(1deg)}}
+@keyframes depth-in{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+.slide.active .hud{animation:depth-in .35s ease-out;}
+.float-anim{animation:float-sub 3s ease-in-out infinite;}
+/* bubbles */
+.bubble{position:absolute;width:8px;height:8px;border-radius:50%;border:1px solid rgba(0,229,204,.5);background:rgba(0,229,204,.1);animation:bubble-up 4s ease-in infinite;}
+
+/* ── NAV ── */
+#nav-bar{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:rgba(2,8,16,.96);border:1px solid rgba(0,229,204,.3);padding:5px 14px;z-index:9999;border-radius:2px;opacity:0;transition:opacity .3s;box-shadow:0 4px 20px rgba(0,0,0,.9);}
+#nav-bar:hover,body:hover #nav-bar{opacity:1;}
+.nav-btn{background:none;border:none;cursor:pointer;color:var(--teal);font-size:15px;padding:4px 8px;font-family:'Share Tech Mono',monospace;transition:color .2s;}
+.nav-btn:hover{color:var(--white);}
+#slide-counter{color:var(--muted);font-size:10px;font-family:'Share Tech Mono',monospace;min-width:62px;text-align:center;}
+.nav-sep{width:1px;height:16px;background:rgba(0,229,204,.2);}
+#btn-voice.speaking{color:var(--bio);text-shadow:0 0 8px var(--bio);}
+#btn-voice.muted{color:var(--muted);}
+#voice-speed{background:none;border:1px solid rgba(0,229,204,.2);color:var(--muted);font-size:9px;font-family:'Share Tech Mono',monospace;padding:2px 6px;cursor:pointer;outline:none;border-radius:2px;}
+#voice-speed option{background:var(--deep);}
+#progress-line{position:fixed;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--teal2),var(--teal));transition:width .4s;z-index:9998;}
+#speak-bar{position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--teal2),var(--bio),var(--teal2));background-size:200% 100%;animation:speak-wave 1s linear infinite;z-index:9997;display:none;}
+@keyframes speak-wave{from{background-position:0%}to{background-position:200%}}
+#click-hint{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);z-index:6;}
+</style>
+</head>
+<body>
+<div id="speak-bar"></div>
+<div id="stage"></div>
+<div id="nav-bar">
+  <button class="nav-btn" id="btnPrev">◄</button>
+  <span id="slide-counter">1/1</span>
+  <button class="nav-btn" id="btnNext">►</button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" id="btn-voice" title="Narrador (M)">🔊</button>
+  <select id="voice-speed"><option value="0.7">LENTO</option><option value="0.85" selected>NORMAL</option><option value="1.1">RÁPIDO</option></select>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" id="btn-music" title="Música abisal (N)">🎵</button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" id="btn-fs">⛶</button>
+</div>
+<div id="progress-line"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// SVG HELPERS
+// ════════════════════════════════════════════════════════
+
+// Horizontal number line SVG — min..max, highlight certain numbers
+function numLineSVG({min=-6, max=6, highlight=[], labels=[], w=680, marksOnly=false}){
+  const h=90, pad=40, gw=w-pad*2;
+  const px = n => pad + ((n-min)/(max-min))*gw;
+  const step=1;
+  let marks='', nums='';
+  for(let n=min;n<=max;n+=step){
+    const x=px(n);
+    const isHL = highlight.includes(n);
+    const col = n>0?'var(--pos)':n<0?'var(--neg)':'var(--zero)';
+    const tickH = n===0?22:12;
+    marks+=`<line x1="${x}" y1="${h/2-tickH/2}" x2="${x}" y2="${h/2+tickH/2}" stroke="${isHL?col:'rgba(0,229,204,.3)'}" stroke-width="${isHL?2.5:1}"/>`;
+    nums+=`<text x="${x}" y="${h/2+tickH/2+16}" text-anchor="middle" font-family="Share Tech Mono" font-size="${isHL?13:10}" fill="${isHL?col:'rgba(0,229,204,.35)'}" font-weight="${isHL?700:400}">${n}</text>`;
+  }
+  // Labels above specific points
+  let lbls='';
+  labels.forEach(([n,txt,col])=>{
+    const x=px(n);
+    lbls+=`<text x="${x}" y="${h/2-18}" text-anchor="middle" font-family="Rajdhani" font-size="12" fill="${col||'var(--teal)'}">${txt}</text>`;
+  });
+  // Dots on highlighted
+  let dots='';
+  highlight.forEach(n=>{
+    const col=n>0?'var(--pos)':n<0?'var(--neg)':'var(--zero)';
+    dots+=`<circle cx="${px(n)}" cy="${h/2}" r="6" fill="${col}" opacity=".9"/>`;
+  });
+  // Arrows
+  const arrows=`
+    <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="rgba(0,229,204,.5)"/></marker></defs>
+    <line x1="${pad-8}" y1="${h/2}" x2="${w-pad+8}" y2="${h/2}" stroke="rgba(0,229,204,.5)" stroke-width="1.5" marker-end="url(#ah)"/>`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;margin:0 auto;"><rect width="${w}" height="${h}" fill="rgba(0,0,8,.5)" rx="3"/>${arrows}${marks}${dots}${lbls}${nums}</svg>`;
+}
+
+// Operations visual
+function opViz(a, op, b){
+  const result = op==='+'? a+b : op==='-'? a-b : op==='×'? a*b : a/b;
+  const col=a=>a>0?'var(--pos)':a<0?'var(--neg)':'var(--zero)';
+  return `<div style="text-align:center;font-family:'Share Tech Mono',monospace;">
+    <div style="font-size:52px;line-height:1.2;">
+      <span style="color:${col(a)};text-shadow:0 0 12px ${col(a)}66;">${a>0?'+'+a:a}</span>
+      <span style="color:rgba(216,240,240,.6);font-size:36px;margin:0 12px;">${op}</span>
+      <span style="color:${col(b)};text-shadow:0 0 12px ${col(b)}66;">${b>0?'+'+b:b}</span>
+      <span style="color:rgba(216,240,240,.5);font-size:36px;margin:0 12px;">=</span>
+      <span style="color:var(--teal);font-size:36px;">?</span>
+    </div>
+  </div>`;
+}
+
+function solViz(a, op, b){
+  const result = op==='+'? a+b : op==='-'? a-b : op==='×'? a*b : a/b;
+  const colR=result>0?'var(--pos)':result<0?'var(--neg)':'var(--zero)';
+  const col=a=>a>0?'var(--pos)':a<0?'var(--neg)':'var(--zero)';
+  return `<div style="text-align:center;font-family:'Share Tech Mono',monospace;">
+    <div style="font-size:58px;line-height:1.2;">
+      <span style="color:${col(a)};text-shadow:0 0 12px ${col(a)}66;">${a>0?'+'+a:a}</span>
+      <span style="color:rgba(216,240,240,.5);font-size:42px;margin:0 10px;">${op}</span>
+      <span style="color:${col(b)};text-shadow:0 0 12px ${col(b)}66;">${b>0?'+'+b:b}</span>
+      <span style="color:rgba(216,240,240,.4);font-size:42px;margin:0 10px;">=</span>
+      <span style="color:${colR};font-size:68px;font-weight:700;text-shadow:0 0 20px ${colR};">${result>0?'+'+result:result}</span>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════════
+const M_COLORS=['','#00E5CC','#39FF14','#FF6B6B','#FFB300','#9B59B6'];
+const M_ICONS =['','🌊','🔦','⚡','🧲','🌀'];
+const M_NAMES =['','ZONA 1','ZONA 2','ZONA 3','ZONA 4','ZONA 5'];
+const M_LABELS=['','Explorador','Buzo','Técnico','Ingeniero','Capitán'];
+const M_ZONES =['','ARRECIFE','ZONA MEDIA','GRIETA','ZONA OSCURA','ABISMO'];
+
+const SLIDES=[
+  {type:'cover'},
+  {type:'briefing'},
+  {type:'instructions'},
+
+  // ZONA 1 — Números enteros y recta numérica
+  {type:'sep',zona:1,clear:[],
+   title:'ZONA 1 — ARRECIFE',
+   subtitle:'Los números enteros y la recta numérica',
+   desc:'En el océano, la profundidad es negativa y la altura sobre el mar es positiva. El nivel del mar es cero.',
+   formula:'ℤ = { …, −3, −2, −1, 0, +1, +2, +3, … }'},
+
+  {type:'q',zona:1,clear:[],eq:1,total:3,
+   context:'El submarino está a <strong>−3 m</strong>. Un pez salta hasta <strong>+2 m</strong> sobre la superficie. Representa ambos en la recta.',
+   question:'¿Cuál está más a la derecha en la recta?',
+   visual: numLineSVG({highlight:[-3,2],labels:[[-3,'−3 m','var(--neg)'],[2,'+2 m','var(--pos)']]}),
+   eqRaw:'El submarino está a menos 3 metros y un pez a más 2 metros. ¿Cuál está más a la derecha en la recta numérica?',
+   hint:'En la recta, los números aumentan de izquierda a derecha'},
+  {type:'s',zona:1,clear:[],eq:1,total:3,
+   solution:'+2 > −3',
+   method:'En la recta numérica, +2 está a la derecha de −3 → +2 es mayor',
+   visual: numLineSVG({highlight:[-3,2],labels:[[-3,'−3 m','var(--neg)'],[2,'+2 m','var(--pos)']]})},
+
+  {type:'q',zona:1,clear:[],eq:2,total:3,
+   context:'Ordena estas profundidades de menor a mayor: <strong>−5, +2, 0, −1, +4</strong>.',
+   question:'¿Cuál es el orden correcto?',
+   visual: numLineSVG({highlight:[-5,-1,0,2,4],min:-6,max:6}),
+   eqRaw:'Ordena de menor a mayor los números: menos 5, más 2, cero, menos 1 y más 4.',
+   hint:'El menor está más a la izquierda en la recta'},
+  {type:'s',zona:1,clear:[],eq:2,total:3,
+   solution:'−5 < −1 < 0 < +2 < +4',
+   method:'De izquierda a derecha en la recta: −5, −1, 0, +2, +4',
+   visual: numLineSVG({highlight:[-5,-1,0,2,4],min:-6,max:6,labels:[[-5,'min','var(--neg)'],[4,'max','var(--pos)']]})},
+
+  {type:'q',zona:1,clear:[],eq:3,total:3,
+   context:'¿Cuánto vale el <strong>valor absoluto</strong> de −7? ¿Y el de +7?',
+   question:'Calcula |−7| y |+7|',
+   visual:`<div style="text-align:center;padding:20px 0;">
+     <div style="font-family:'Share Tech Mono',monospace;font-size:48px;margin-bottom:14px;">
+       <span style="color:rgba(0,229,204,.5);">|</span><span class="num-neg" style="font-size:56px;">−7</span><span style="color:rgba(0,229,204,.5);">|</span>
+       <span style="color:var(--muted);font-size:32px;margin:0 14px;">=</span>
+       <span style="color:var(--teal);font-size:36px;">?</span>
+     </div>
+     <div style="font-family:'Exo 2',sans-serif;font-size:15px;color:var(--muted);margin-top:8px;">El valor absoluto es la distancia al cero en la recta</div>
+   </div>`,
+   eqRaw:'¿Cuánto vale el valor absoluto de menos 7? ¿Y el de más 7?',
+   hint:'El valor absoluto es siempre positivo — es la distancia al cero'},
+  {type:'s',zona:1,clear:[],eq:3,total:3,
+   solution:'|−7| = 7  y  |+7| = 7',
+   method:'La distancia de −7 al cero es 7. La de +7 también es 7. Iguales.'},
+
+  {type:'zoneup',zona:2,clear:[1],done:1,next:2},
+
+  // ZONA 2 — Suma de enteros
+  {type:'sep',zona:2,clear:[1],
+   title:'ZONA 2 — ZONA MEDIA',
+   subtitle:'Suma de números enteros',
+   desc:'Para navegar hay que calcular cambios de profundidad. Subir es sumar positivos; bajar es sumar negativos.',
+   formula:'(+a)+(+b)=+(a+b)   (−a)+(−b)=−(a+b)   Signos distintos: resta y conserva el mayor'},
+
+  {type:'q',zona:2,clear:[1],eq:1,total:3,
+   context:'El submarino está a <strong>−5 m</strong> y sube <strong>+3 m</strong>. ¿A qué profundidad queda?',
+   question:'Calcula: (−5) + (+3)',
+   visual: opViz(-5,'+',3),
+   eqRaw:'El submarino está a menos 5 metros y sube 3 metros. Calcula menos 5 más 3.',
+   hint:'Signos distintos → resta 5−3=2, conserva el signo del mayor (negativo)'},
+  {type:'s',zona:2,clear:[1],eq:1,total:3,
+   solution:'(−5)+(+3) = −2',
+   method:'Signos distintos → |5|−|3|=2, signo del mayor: − → resultado: −2',
+   visual: solViz(-5,'+',3)},
+
+  {type:'q',zona:2,clear:[1],eq:2,total:3,
+   context:'Temperatura en la grieta: <strong>−8°C</strong>. Sube <strong>+5°C</strong> al encender el calentador. ¿Resultado?',
+   question:'Calcula: (−8) + (+5)',
+   visual: opViz(-8,'+',5),
+   eqRaw:'Temperatura menos 8 grados más 5 grados de calentador. ¿Cuál es el resultado?',
+   hint:'Signos distintos → 8−5=3, signo del mayor valor absoluto: −'},
+  {type:'s',zona:2,clear:[1],eq:2,total:3,
+   solution:'(−8)+(+5) = −3',
+   method:'|8|−|5|=3, predomina el signo − → −3',
+   visual: solViz(-8,'+',5)},
+
+  {type:'q',zona:2,clear:[1],eq:3,total:3,
+   context:'Dos corrientes frías: <strong>−4°C</strong> y <strong>−6°C</strong> se juntan. ¿Temperatura resultante?',
+   question:'Calcula: (−4) + (−6)',
+   visual: opViz(-4,'+',-6),
+   eqRaw:'Dos corrientes frías de menos 4 y menos 6 grados. ¿Cuál es la temperatura resultante?',
+   hint:'Mismo signo (−) → suma los valores absolutos y pon el signo común'},
+  {type:'s',zona:2,clear:[1],eq:3,total:3,
+   solution:'(−4)+(−6) = −10',
+   method:'Mismo signo → 4+6=10, signo común − → −10',
+   visual: solViz(-4,'+',-6)},
+
+  {type:'zoneup',zona:3,clear:[1,2],done:2,next:3},
+
+  // ZONA 3 — Resta de enteros
+  {type:'sep',zona:3,clear:[1,2],
+   title:'ZONA 3 — GRIETA',
+   subtitle:'Resta de números enteros',
+   desc:'Restar un número es lo mismo que sumar su opuesto. El opuesto cambia el signo.',
+   formula:'a − b = a + (−b)     Ejemplo: 3−(−2) = 3+(+2) = 5'},
+
+  {type:'q',zona:3,clear:[1,2],eq:1,total:3,
+   context:'El submarino baja de <strong>−2 m</strong> a <strong>−9 m</strong>. ¿Cuántos metros descendió?',
+   question:'Calcula: (−2) − (−9)',
+   visual: opViz(-2,'-',-9),
+   eqRaw:'El submarino baja de menos 2 metros a menos 9 metros. Calcula menos 2 menos menos 9.',
+   hint:'Restar −9 es sumar +9. Convierte: (−2)+(+9)'},
+  {type:'s',zona:3,clear:[1,2],eq:1,total:3,
+   solution:'(−2)−(−9) = +7',
+   method:'(−2)+(+9) = +7 → descendió 7 metros',
+   visual: solViz(-2,'-',-9)},
+
+  {type:'q',zona:3,clear:[1,2],eq:2,total:3,
+   context:'Temperatura exterior: <strong>+3°C</strong>. Interior de la grieta: <strong>−5°C</strong>. ¿Diferencia?',
+   question:'Calcula: (+3) − (−5)',
+   visual: opViz(3,'-',-5),
+   eqRaw:'Temperatura exterior más 3 grados menos la temperatura interior de menos 5 grados.',
+   hint:'(+3)−(−5) = (+3)+(+5)'},
+  {type:'s',zona:3,clear:[1,2],eq:2,total:3,
+   solution:'(+3)−(−5) = +8',
+   method:'(+3)+(+5) = +8°C de diferencia',
+   visual: solViz(3,'-',-5)},
+
+  {type:'q',zona:3,clear:[1,2],eq:3,total:3,
+   context:'Presión en zona A: <strong>−4</strong> atm (bajo cero). Zona B: <strong>+6</strong> atm. ¿Diferencia de presiones?',
+   question:'Calcula: (+6) − (−4)',
+   visual: opViz(6,'-',-4),
+   eqRaw:'Diferencia de presión entre más 6 y menos 4.',
+   hint:'(+6)−(−4) = (+6)+(+4)'},
+  {type:'s',zona:3,clear:[1,2],eq:3,total:3,
+   solution:'(+6)−(−4) = +10',
+   method:'(+6)+(+4) = +10 atm de diferencia',
+   visual: solViz(6,'-',-4)},
+
+  {type:'zoneup',zona:4,clear:[1,2,3],done:3,next:4},
+
+  // ZONA 4 — Multiplicación
+  {type:'sep',zona:4,clear:[1,2,3],
+   title:'ZONA 4 — ZONA OSCURA',
+   subtitle:'Multiplicación de enteros: regla de los signos',
+   desc:'Para calcular la potencia del motor submarino usamos multiplicaciones. Los signos tienen su propia regla de combate.',
+   formula:'(+)×(+)=+    (−)×(−)=+    (+)×(−)=−    (−)×(+)=−'},
+
+  {type:'q',zona:4,clear:[1,2,3],eq:1,total:3,
+   context:'La hélice retrocede <strong>−3 m</strong> por vuelta y da <strong>4 vueltas</strong>. ¿Desplazamiento total?',
+   question:'Calcula: (−3) × (+4)',
+   visual: opViz(-3,'×',4),
+   eqRaw:'La hélice retrocede menos 3 metros por vuelta y da 4 vueltas. Calcula menos 3 por más 4.',
+   hint:'Signos distintos → resultado negativo. 3×4=12'},
+  {type:'s',zona:4,clear:[1,2,3],eq:1,total:3,
+   solution:'(−3)×(+4) = −12',
+   method:'Signos distintos → − . 3×4=12 → −12',
+   visual: solViz(-3,'×',4)},
+
+  {type:'q',zona:4,clear:[1,2,3],eq:2,total:3,
+   context:'Se pierden <strong>−2 unidades</strong> de oxígeno durante <strong>5 horas</strong>. ¿Cambio total?',
+   question:'Calcula: (+5) × (−2)',
+   visual: opViz(5,'×',-2),
+   eqRaw:'Se pierden menos 2 unidades de oxígeno durante 5 horas. Calcula más 5 por menos 2.',
+   hint:'Signos distintos → negativo'},
+  {type:'s',zona:4,clear:[1,2,3],eq:2,total:3,
+   solution:'(+5)×(−2) = −10',
+   method:'Signos distintos → − . 5×2=10 → −10',
+   visual: solViz(5,'×',-2)},
+
+  {type:'q',zona:4,clear:[1,2,3],eq:3,total:3,
+   context:'Motor inverso: <strong>−3 m/s</strong> de velocidad durante <strong>−4 s</strong> (retrocede el tiempo en el modelo). Calcula.',
+   question:'Calcula: (−3) × (−4)',
+   visual: opViz(-3,'×',-4),
+   eqRaw:'Velocidad menos 3 metros por segundo durante menos 4 segundos. Calcula menos 3 por menos 4.',
+   hint:'Signos iguales (ambos −) → resultado POSITIVO'},
+  {type:'s',zona:4,clear:[1,2,3],eq:3,total:3,
+   solution:'(−3)×(−4) = +12',
+   method:'Mismo signo − → resultado + . 3×4=12 → +12',
+   visual: solViz(-3,'×',-4)},
+
+  {type:'zoneup',zona:5,clear:[1,2,3,4],done:4,next:5},
+
+  // ZONA 5 — División y operaciones combinadas
+  {type:'sep',zona:5,clear:[1,2,3,4],
+   title:'ZONA 5 — ABISMO',
+   subtitle:'División de enteros y operaciones combinadas',
+   desc:'En el abismo más profundo esperan las operaciones más complejas. La regla de los signos en división es igual que en multiplicación.',
+   formula:'(+)÷(+)=+   (−)÷(−)=+   (+)÷(−)=−   (−)÷(+)=−'},
+
+  {type:'q',zona:5,clear:[1,2,3,4],eq:1,total:3,
+   context:'El submarino desciende <strong>−20 m</strong> en <strong>4 minutos</strong> a ritmo constante. ¿Metros por minuto?',
+   question:'Calcula: (−20) ÷ (+4)',
+   visual: opViz(-20,'÷',4),
+   eqRaw:'El submarino desciende menos 20 metros en 4 minutos. Calcula menos 20 dividido entre 4.',
+   hint:'Signos distintos → negativo. 20÷4=5'},
+  {type:'s',zona:5,clear:[1,2,3,4],eq:1,total:3,
+   solution:'(−20)÷(+4) = −5',
+   method:'Signos distintos → − . 20÷4=5 → −5 m/min',
+   visual: solViz(-20,'÷',4)},
+
+  {type:'q',zona:5,clear:[1,2,3,4],eq:2,total:3,
+   context:'La temperatura baja <strong>−12°C</strong> en <strong>−3 horas</strong> (modelo inverso). ¿Tasa?',
+   question:'Calcula: (−12) ÷ (−3)',
+   visual: opViz(-12,'÷',-3),
+   eqRaw:'Menos 12 dividido entre menos 3.',
+   hint:'Mismo signo (ambos −) → resultado POSITIVO'},
+  {type:'s',zona:5,clear:[1,2,3,4],eq:2,total:3,
+   solution:'(−12)÷(−3) = +4',
+   method:'Mismo signo → + . 12÷3=4 → +4',
+   visual: solViz(-12,'÷',-3)},
+
+  {type:'q',zona:5,clear:[1,2,3,4],eq:3,total:3,
+   context:'Operación combinada final del capitán: <strong>(−3) × (+4) + (−2) × (−5)</strong>',
+   question:'Resuelve la expresión combinada',
+   visual:`<div style="text-align:center;padding:14px 0;font-family:'Share Tech Mono',monospace;">
+     <div style="font-size:36px;color:var(--white);line-height:1.4;">
+       <span class="num-neg">(−3)</span><span style="color:var(--muted);margin:0 8px;">×</span><span class="num-pos">(+4)</span>
+       <span style="color:var(--muted);margin:0 8px;">+</span>
+       <span class="num-neg">(−2)</span><span style="color:var(--muted);margin:0 8px;">×</span><span class="num-neg">(−5)</span>
+     </div>
+     <div style="font-size:20px;color:var(--muted);margin-top:14px;">Primero multiplica, luego suma</div>
+   </div>`,
+   eqRaw:'Operación combinada: menos 3 por más 4, más menos 2 por menos 5. Primero multiplica, luego suma.',
+   hint:'Primero: (−3)×(+4)=−12 y (−2)×(−5)=+10. Luego suma.'},
+  {type:'s',zona:5,clear:[1,2,3,4],eq:3,total:3,
+   solution:'−12 + 10 = −2',
+   method:'(−3)×(+4)=−12  |  (−2)×(−5)=+10  |  −12+10=−2'},
+
+  {type:'victory',clear:[1,2,3,4,5]}
+];
+
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+function corners(){return`<div class="sonar-border"></div><div class="cb tl"></div><div class="cb tr"></div><div class="cb bl"></div><div class="cb br"></div>`;}
+function bubbles(n=5){let s='';for(let i=0;i<n;i++){const x=100+Math.random()*1080,d=3+Math.random()*4,del=Math.random()*3;s+=`<div class="bubble" style="left:${x}px;bottom:${20+Math.random()*200}px;animation-delay:${del}s;animation-duration:${d}s;"></div>`;}return s;}
+function tracker(activeZ,cleared=[]){
+  return`<div class="tracker">`+[1,2,3,4,5].map(z=>{
+    const done=cleared.includes(z),active=activeZ===z;
+    const cls=done?'clear':(active?'active':'');
+    return`<div class="depth-btn ${cls}"><div class="dp-icon">${done?'✅':M_ICONS[z]}</div><div class="dp-label">${M_LABELS[z]}</div></div>`;
+  }).join('')+`</div>`;
+}
+function zoneBand(z){const c=M_COLORS[z];return`<div class="depth-band" style="top:76px;color:${c};background:linear-gradient(90deg,transparent,${c}18,${c}30,${c}18,transparent);">${M_NAMES[z]} &nbsp;·&nbsp; ${M_ZONES[z]}</div>`;}
+
+// ════════════════════════════════════════════════════════
+// RENDERERS
+// ════════════════════════════════════════════════════════
+function renderCover(){return`
+<div class="sea-bg"></div>${bubbles(12)}${corners()}
+<div style="position:absolute;top:46px;left:0;right:0;text-align:center;">
+  <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:5px;color:var(--muted);margin-bottom:12px;">◆ CENTRO DE INVESTIGACIÓN OCEÁNICA ◆</div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:84px;font-weight:700;color:var(--teal);text-shadow:0 0 30px rgba(0,229,204,.6);letter-spacing:2px;line-height:.95;">OPERACIÓN<br>ABISMO</div>
+  <div style="width:480px;height:2px;background:linear-gradient(90deg,transparent,var(--teal),transparent);margin:18px auto;"></div>
+  <div style="font-family:'Exo 2',sans-serif;font-size:26px;color:var(--white);letter-spacing:4px;">Números Enteros · 1.º ESO</div>
+</div>
+<div class="float-anim" style="position:absolute;top:300px;left:0;right:0;text-align:center;font-size:80px;opacity:.6;">🌊</div>
+<div class="hud" style="position:absolute;bottom:66px;left:120px;right:120px;padding:14px 26px;" data-label="DATOS DE MISIÓN">
+  <div style="display:flex;justify-content:space-around;align-items:center;">
+    ${[['🌊','5 ZONAS'],['📊','15 SONDEOS'],['🔢','ℤ enteros'],['⚡','Ops. con signos']].map(([i,t])=>`
+    <div style="text-align:center;"><div style="font-size:26px;">${i}</div><div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--teal);margin-top:4px;">${t}</div></div>`).join('<div style="width:1px;height:32px;background:rgba(0,229,204,.15);"></div>')}
+  </div>
+</div>
+<div id="click-hint">— CLIC PARA INICIAR INMERSIÓN —</div>`;}
+
+function renderBriefing(){return`
+<div class="sea-bg"></div>${bubbles(8)}${corners()}
+<div style="position:absolute;top:22px;left:0;right:0;text-align:center;"><span class="badge badge-teal">◆ BRIEFING OPERACIONAL ◆</span></div>
+<div style="position:absolute;top:70px;left:60px;width:220px;bottom:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+  <div class="float-anim" style="font-size:72px;opacity:.7;">🤿</div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--teal);">COMANDANTE</div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--white);">CMDR. ZETA</div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);">MATEMÁTICA SUBMARINA</div>
+</div>
+<div class="hud" style="position:absolute;top:70px;left:300px;right:56px;bottom:60px;padding:28px 32px;" data-label="MISIÓN">
+  <div style="font-family:'Exo 2',sans-serif;font-size:20px;color:var(--white);line-height:1.75;">
+    <p style="color:var(--teal);font-weight:600;">Tripulación, atención.</p><br>
+    <p>Los sensores del <strong>submarino Zeta-7</strong> han detectado anomalías en el océano de los números enteros. Temperaturas <span class="num-neg">negativas</span>, profundidades <span class="num-neg">bajo cero</span> y alturas <span class="num-pos">positivas</span> se han mezclado.</p><br>
+    <p>Vuestra misión: resolver <strong style="color:var(--teal);">15 sondeos</strong> en 5 zonas del océano para restablecer todos los sistemas de navegación.</p><br>
+    <p style="color:var(--amber);">⚠ Los errores de cálculo pueden causar implosión del casco.</p>
+  </div>
+</div>
+<div class="hud hud-warn" style="position:absolute;bottom:18px;left:300px;right:56px;height:42px;display:flex;align-items:center;justify-content:center;gap:10px;">
+  <span style="font-size:16px;">🚨</span>
+  <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--neg);">RECUERDA: arriba es + y abajo es − . El cero es la superficie.</span>
+</div>
+<div id="click-hint">— CLIC PARA CONTINUAR —</div>`;}
+
+function renderInstructions(){
+  const steps=[['📍','RECTA NUMÉRICA','Los enteros van de −∞ a +∞ en una recta. Los negativos a la izquierda, los positivos a la derecha.'],['⚡','OPERACIONES','Hay reglas para sumar, restar, multiplicar y dividir enteros. Las reglas de signos son clave.'],['🔦','METODOLOGÍA','Primero aparece el sondeo. Calcula antes de ver la solución. Cada sondeo correcto sube el oxígeno.'],['🌀','ZONAS','5 zonas con 3 sondeos cada una. La dificultad aumenta con la profundidad.']];
+  return`
+<div class="sea-bg"></div>${corners()}
+<div style="position:absolute;top:22px;left:0;right:0;text-align:center;"><span class="badge badge-teal">◆ MANUAL DE INMERSIÓN ◆</span></div>
+<div style="position:absolute;top:72px;left:56px;right:56px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+  ${steps.map(([i,t,d])=>`<div class="hud" style="padding:20px 22px;display:flex;gap:14px;"><div style="font-size:32px;flex-shrink:0;">${i}</div><div><div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--teal);letter-spacing:2px;margin-bottom:6px;">${t}</div><div style="font-family:'Exo 2',sans-serif;font-size:17px;color:var(--white);line-height:1.5;">${d}</div></div></div>`).join('')}
+</div>
+<div class="hud" style="position:absolute;bottom:54px;left:56px;right:56px;padding:12px 24px;">
+  <div style="display:flex;justify-content:space-around;align-items:center;">
+    ${[['1','Recta numérica'],['2','Suma'],['3','Resta'],['4','Multiplicación'],['5','División']].map(([n,l],i)=>`<div style="text-align:center;"><div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:${M_COLORS[i+1]};">Z${n}</div><div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;">${l}</div></div>`).join('<span style="color:var(--muted);">›</span>')}
+  </div>
+</div>
+<div id="click-hint">— CLIC PARA COMENZAR LA INMERSIÓN —</div>`;}
+
+function renderSep(sl){
+  const c=M_COLORS[sl.zona];
+  return`
+<div class="sea-bg"></div>${bubbles(6)}${corners()}
+${tracker(sl.zona,sl.clear)}
+<div style="position:absolute;top:10px;left:20px;"><span class="badge" style="background:${c}18;color:${c};border-color:${c}66;">${M_ICONS[sl.zona]} ${M_NAMES[sl.zona]}</span></div>
+<div style="position:absolute;top:82px;left:0;right:0;text-align:center;">
+  <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:5px;color:${c};opacity:.8;margin-bottom:10px;">[ ${M_ZONES[sl.zona]} ]</div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:58px;font-weight:700;color:${c};text-shadow:0 0 25px ${c}66;line-height:1.1;">${sl.title}</div>
+  <div style="width:400px;height:2px;background:${c};margin:14px auto;opacity:.5;"></div>
+  <div style="font-family:'Exo 2',sans-serif;font-size:24px;font-style:italic;color:var(--white);">${sl.subtitle}</div>
+</div>
+<div class="hud" style="position:absolute;top:308px;left:120px;right:120px;padding:18px 28px;border-color:${c}55;">
+  <div style="font-family:'Exo 2',sans-serif;font-size:18px;color:var(--white);text-align:center;line-height:1.65;">${sl.desc}</div>
+</div>
+<div style="position:absolute;bottom:66px;left:0;right:0;text-align:center;">
+  <div class="formula-box">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:5px;">PROTOCOLO</div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--teal);">${sl.formula}</div>
+  </div>
+</div>
+<div id="click-hint">— CLIC PARA INICIAR SONDEOS —</div>`;}
+
+function renderQuestion(sl){
+  const c=M_COLORS[sl.zona];
+  return`
+<div class="sea-bg"></div>${corners()}
+${tracker(sl.zona,sl.clear)}
+${zoneBand(sl.zona)}
+<div style="position:absolute;top:118px;left:26px;right:26px;display:flex;justify-content:space-between;">
+  <span class="badge" style="background:${c}15;color:${c};border-color:${c}55;">🔦 SONDEO ${sl.eq} / ${sl.total}</span>
+  <span class="badge badge-amber">✏ CALCULA TÚ</span>
+</div>
+<div class="hud" style="position:absolute;top:160px;left:26px;right:26px;padding:12px 20px;border-color:${c}44;">
+  <div style="font-family:'Exo 2',sans-serif;font-size:18px;color:var(--white);line-height:1.5;">${sl.context}</div>
+</div>
+<div style="position:absolute;top:248px;left:26px;right:26px;display:flex;gap:14px;height:284px;">
+  <div class="hud" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-color:${c}66;gap:10px;">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:${c};letter-spacing:2px;">[ LECTURA DE SENSORES ]</div>
+    ${sl.visual}
+  </div>
+  <div class="hud" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:18px;border-color:${c}33;">
+    <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;color:${c};text-align:center;letter-spacing:1px;">${sl.question}</div>
+    <div style="width:80%;height:1px;background:rgba(0,229,204,.15);"></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">RESULTADO: <span style="color:var(--teal);animation:speak-wave 1s infinite;">_</span></div>
+  </div>
+</div>
+<div class="hud hud-bio" style="position:absolute;bottom:50px;left:26px;right:26px;height:48px;display:flex;align-items:center;padding:0 18px;gap:10px;">
+  <span style="font-size:15px;">💡</span>
+  <span style="font-family:'Exo 2',sans-serif;font-size:16px;color:rgba(57,255,20,.9);font-style:italic;">${sl.hint}</span>
+</div>
+<div id="click-hint">— CLIC PARA VER LA SOLUCIÓN —</div>`;}
+
+function renderSolution(sl){
+  const isLast=sl.eq===sl.total;
+  return`
+<div class="sea-bg"></div>${corners()}
+${tracker(sl.zona,sl.clear)}
+${zoneBand(sl.zona)}
+<div style="position:absolute;top:118px;left:26px;right:26px;display:flex;justify-content:space-between;">
+  <span class="badge badge-teal">🔦 SONDEO ${sl.eq} / ${sl.total}</span>
+  <span class="badge badge-bio">✅ VERIFICADO</span>
+</div>
+<div class="hud" style="position:absolute;top:162px;left:26px;right:26px;height:82px;display:flex;align-items:center;justify-content:center;opacity:.7;">
+  <div style="font-family:'Exo 2',sans-serif;font-size:15px;color:var(--white);text-align:center;font-style:italic;">${sl.context||''}</div>
+</div>
+<div class="hud hud-bio" style="position:absolute;top:256px;left:26px;right:26px;height:312px;box-shadow:0 0 30px rgba(57,255,20,.2);">
+  <div style="position:absolute;top:14px;left:20px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--bio);letter-spacing:2px;">[ SOLUCIÓN VERIFICADA ]</div>
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding-top:20px;">
+    ${sl.visual||`<div style="font-family:'Share Tech Mono',monospace;font-size:52px;color:var(--bio);">${sl.solution}</div>`}
+    <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--bio);text-shadow:0 0 15px var(--bio);">${sl.solution}</div>
+  </div>
+</div>
+<div class="hud" style="position:absolute;bottom:50px;left:26px;right:26px;height:46px;display:flex;align-items:center;padding:0 18px;background:rgba(57,255,20,.06);">
+  <span style="font-size:13px;margin-right:8px;">🔬</span>
+  <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:rgba(57,255,20,.8);">${sl.method}</span>
+</div>
+<div id="click-hint" style="color:${isLast?'var(--bio)':'var(--muted)'};">— ${isLast?'¡ZONA COMPLETADA! → SIGUIENTE ZONA':'SIGUIENTE SONDEO '+(sl.eq+1)} —</div>`;}
+
+function renderZoneUp(sl){
+  const c=M_COLORS[sl.next];
+  return`
+<div class="sea-bg"></div>${bubbles(10)}${corners()}
+${tracker(sl.next,sl.clear)}
+<div style="position:absolute;inset:18px;border:2px solid var(--bio);opacity:.3;box-shadow:0 0 30px rgba(57,255,20,.3);"></div>
+<div style="position:absolute;top:125px;left:0;right:0;text-align:center;font-size:76px;" class="float-anim">🌊</div>
+<div style="position:absolute;top:220px;left:0;right:0;text-align:center;">
+  <div style="font-family:'Rajdhani',sans-serif;font-size:54px;font-weight:700;color:var(--bio);text-shadow:0 0 30px rgba(57,255,20,.6);">ZONA DESPEJADA</div>
+  <div style="width:300px;height:1.5px;background:var(--bio);margin:14px auto;opacity:.5;"></div>
+  <div style="font-family:'Exo 2',sans-serif;font-size:20px;font-style:italic;color:var(--white);">Zona ${sl.done} completada. ¡Excelente trabajo, tripulación!</div>
+</div>
+<div class="hud" style="position:absolute;top:406px;left:220px;right:220px;height:56px;display:flex;align-items:center;justify-content:center;border-color:${c};background:${c}15;">
+  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;color:${c};letter-spacing:2px;">${M_ICONS[sl.next]} DESCENDIENDO A ${M_NAMES[sl.next]}: ${M_ZONES[sl.next]}</div>
+</div>
+<div id="click-hint" style="color:var(--bio);">— CLIC PARA CONTINUAR LA INMERSIÓN —</div>`;}
+
+function renderVictory(){return`
+<div class="sea-bg"></div>${bubbles(16)}${corners()}
+${tracker(0,[1,2,3,4,5])}
+<div style="position:absolute;inset:18px;border:2px solid var(--teal);box-shadow:0 0 50px rgba(0,229,204,.4);pointer-events:none;z-index:2;animation:sonar-ping 2s infinite;"></div>
+<div style="position:absolute;top:82px;left:0;right:0;text-align:center;">
+  <div style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:5px;color:var(--teal);margin-bottom:10px;">[ MISIÓN COMPLETADA ]</div>
+  <div style="font-family:'Rajdhani',sans-serif;font-size:62px;font-weight:700;color:var(--teal);text-shadow:0 0 30px rgba(0,229,204,.7);line-height:1.1;">¡¡ OCÉANO<br>CONQUISTADO !!</div>
+</div>
+<div style="position:absolute;top:280px;left:140px;right:140px;height:2px;background:linear-gradient(90deg,transparent,var(--teal),transparent);"></div>
+<div style="position:absolute;top:298px;left:100px;right:100px;text-align:center;">
+  <div style="font-family:'Exo 2',sans-serif;font-size:19px;font-style:italic;color:var(--white);line-height:1.7;">El submarino Zeta-7 ha explorado las 5 zonas del océano.<br>Los 15 sondeos han restaurado todos los sistemas de navegación enteros.</div>
+</div>
+<div style="position:absolute;top:394px;left:0;right:0;text-align:center;font-size:44px;filter:drop-shadow(0 0 10px var(--teal));">⭐ ⭐ ⭐ ⭐ ⭐</div>
+<div class="hud hud-bio" style="position:absolute;top:462px;left:240px;right:240px;height:52px;display:flex;align-items:center;justify-content:center;">
+  <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--bio);letter-spacing:1px;">5/5 ZONAS ✓ &nbsp;·&nbsp; 15/15 SONDEOS ✓ &nbsp;·&nbsp; ℤ DOMINADOS</span>
+</div>
+<div class="hud hud-amber" style="position:absolute;bottom:50px;left:100px;right:100px;padding:12px 22px;height:44px;display:flex;align-items:center;justify-content:center;">
+  <div style="font-family:'Exo 2',sans-serif;font-size:17px;font-style:italic;color:var(--amber);">"Los números negativos no son el abismo — son la profundidad del conocimiento." — Cmdr. Zeta</div>
+</div>
+<div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">Pulsa R para reiniciar la inmersión</div>`;}
+
+// ════════════════════════════════════════════════════════
+// ENGINE
+// ════════════════════════════════════════════════════════
+const stage=document.getElementById('stage');
+let current=0,slideEls=[];
+function getHTML(sl){switch(sl.type){case'cover':return renderCover();case'briefing':return renderBriefing();case'instructions':return renderInstructions();case'sep':return renderSep(sl);case'q':return renderQuestion(sl);case's':return renderSolution(sl);case'zoneup':return renderZoneUp(sl);case'victory':return renderVictory();default:return'';}}
+function buildAll(){stage.innerHTML='';slideEls=[];SLIDES.forEach(sl=>{const el=document.createElement('div');el.className='slide';el.innerHTML=getHTML(sl);stage.appendChild(el);slideEls.push(el);});}
+function goTo(idx){if(idx<0||idx>=SLIDES.length)return;slideEls[current].classList.remove('active');current=idx;slideEls[current].classList.add('active');updateUI();setTimeout(()=>speak(getSpeechText(SLIDES[current])),300);}
+function updateUI(){document.getElementById('slide-counter').textContent=`${current+1}/${SLIDES.length}`;document.getElementById('progress-line').style.width=((current+1)/SLIDES.length*100)+'%';}
+function scaleStage(){const s=Math.min(window.innerWidth/1280,window.innerHeight/720),ox=(window.innerWidth-1280*s)/2,oy=(window.innerHeight-720*s)/2;stage.style.transform=`translate(${ox}px,${oy}px) scale(${s})`;}
+
+// ── TTS ──────────────────────────────────────────────────
+const synth=window.speechSynthesis;let voiceMuted=false,subVoice=null,speakRate=0.85;
+function stripHTML(h){return h.replace(/<[^>]*>/g,'').replace(/&[a-z#0-9]+;/g,' ').replace(/\s+/g,' ').trim();}
+function getSpeechText(sl){
+  switch(sl.type){
+    case'cover':        return'Operación Abismo. Números enteros para primero de la E.S.O. Haz clic para iniciar la inmersión.';
+    case'briefing':     return'Tripulación, atención. Los sensores del submarino Zeta-7 han detectado anomalías. Debéis resolver 15 sondeos en 5 zonas del océano entero.';
+    case'instructions': return'Manual de inmersión. Cinco zonas: recta numérica, suma, resta, multiplicación y división de enteros. Calcula siempre antes de ver la solución.';
+    case'sep':          return`${sl.title}. ${sl.subtitle}. ${sl.desc}. Protocolo: ${sl.formula.replace(/→/g,' entonces ').replace(/ℤ/,'el conjunto de los enteros')}.`;
+    case'q':            return`Sondeo ${sl.eq} de ${sl.total}. ${stripHTML(sl.context)}. ${sl.question}. Pista: ${sl.hint}.`;
+    case's':            return`Solución verificada. Resultado: ${sl.solution}. Método: ${sl.method.replace(/→/g,' entonces ').replace(/\|/g,' valor absoluto de ').replace(/·/g,' por ')}.`;
+    case'zoneup':       return`¡Zona despejada! Zona ${sl.done} completada. Descendiendo a zona ${sl.next}: ${M_ZONES[sl.next]}.`;
+    case'victory':      return'¡Océano conquistado! El submarino Zeta-7 ha explorado las cinco zonas. Los quince sondeos han restaurado todos los sistemas. Los números enteros han sido dominados.';
+    default:return'';
+  }
+}
+function loadVoice(){const vs=synth.getVoices();if(!vs.length)return;const pref=[v=>/google/i.test(v.name)&&/es/i.test(v.lang),v=>/es[-_]/i.test(v.lang),v=>/es/i.test(v.lang)];for(const t of pref){const m=vs.find(t);if(m){subVoice=m;break;}}}
+synth.onvoiceschanged=loadVoice;loadVoice();
+function speak(txt){synth.cancel();if(voiceMuted||!txt)return;const u=new SpeechSynthesisUtterance(txt);u.lang='es-ES';u.rate=speakRate;u.pitch=0.58;u.volume=1;if(subVoice)u.voice=subVoice;const btn=document.getElementById('btn-voice'),bar=document.getElementById('speak-bar');btn.classList.add('speaking');bar.style.display='block';u.onend=u.onerror=()=>{btn.classList.remove('speaking');bar.style.display='none';};synth.speak(u);}
+document.getElementById('btn-voice').addEventListener('click',e=>{e.stopPropagation();voiceMuted=!voiceMuted;const btn=document.getElementById('btn-voice');if(voiceMuted){synth.cancel();btn.textContent='🔇';btn.classList.remove('speaking');btn.classList.add('muted');document.getElementById('speak-bar').style.display='none';}else{btn.textContent='🔊';btn.classList.remove('muted');speak(getSpeechText(SLIDES[current]));}});
+document.getElementById('voice-speed').addEventListener('change',e=>{e.stopPropagation();speakRate=parseFloat(e.target.value);if(!voiceMuted)speak(getSpeechText(SLIDES[current]));});
+
+// ── MÚSICA ABISAL (Web Audio API) ─────────────────────────
+let musicEnabled=false,musicAudio=null;
+function bufToWav(b,sr){const nc=b.numberOfChannels,len=b.length*nc*2+44,ab=new ArrayBuffer(len),v=new DataView(ab);let p=0;const u16=n=>{v.setUint16(p,n,true);p+=2;};const u32=n=>{v.setUint32(p,n,true);p+=4;};const s16=n=>{v.setInt16(p,Math.max(-32768,Math.min(32767,(n<0?n*32768:n*32767)|0)),true);p+=2;};u32(0x46464952);u32(len-8);u32(0x45564157);u32(0x20746d66);u32(16);u16(1);u16(nc);u32(sr);u32(sr*nc*2);u16(nc*2);u16(16);u32(0x61746164);u32(len-p-4);const chs=Array.from({length:nc},(_,i)=>b.getChannelData(i));for(let i=0;i<b.length;i++)for(let c=0;c<nc;c++)s16(chs[c][i]);return new Blob([ab],{type:'audio/wav'});}
+function generateAbyssMusic(){
+  const ctx=new(window.AudioContext||window.webkitAudioContext)();
+  const sr=ctx.sampleRate,dur=36,buf=ctx.createBuffer(2,sr*dur,sr);
+  for(let ch=0;ch<2;ch++){
+    const d=buf.getChannelData(ch);
+    for(let i=0;i<d.length;i++){
+      const t=i/sr;
+      // Deep sub-bass rumble (Bb1 = 58.27 Hz)
+      const sub=Math.sin(2*Math.PI*58.27*t)*0.07
+               +Math.sin(2*Math.PI*29.14*t)*0.04; // octave below
+      // Slow sonar ping: 440 Hz pulse every 4s
+      const pingCycle=t%4,pingEnv=Math.exp(-pingCycle*4)*Math.min(1,pingCycle*200);
+      const ping=Math.sin(2*Math.PI*440*t)*pingEnv*0.055;
+      // Whale-like glide: slow freq modulation
+      const wFreq=110*(1+0.08*Math.sin(2*Math.PI*0.12*t));
+      const whale=Math.sin(2*Math.PI*wFreq*t)*(0.3+0.7*Math.sin(2*Math.PI*0.07*t))*0.04;
+      // Bubbles: sparse high noise bursts
+      const bubbleCycle=t%2.3,bubbleEnv=bubbleCycle<0.08?Math.exp(-bubbleCycle*40):0;
+      const bubble=(Math.random()-.5)*bubbleEnv*0.015;
+      // Pressure pad: slow chord D2+A2
+      const padEnv=0.4+0.6*Math.sin(2*Math.PI*0.06*t+1);
+      const pad=Math.sin(2*Math.PI*73.42*t)*0.025*padEnv
+               +Math.sin(2*Math.PI*110*t)*0.018*padEnv;
+      // Master
+      const env=Math.min(1,Math.min(t*0.8,(dur-t)*0.8));
+      d[i]=(sub+ping+whale+bubble+pad)*env*(ch===0?1:0.82);
+    }
+  }
+  const blob=bufToWav(buf,sr);
+  const audio=new Audio(URL.createObjectURL(blob));
+  audio.loop=true;audio.volume=0.22;return audio;
+}
+document.getElementById('btn-music').addEventListener('click',e=>{e.stopPropagation();musicEnabled=!musicEnabled;const btn=document.getElementById('btn-music');if(musicEnabled){if(!musicAudio)musicAudio=generateAbyssMusic();musicAudio.play().catch(()=>{});btn.textContent='🔊';btn.style.color='var(--teal)';}else{if(musicAudio)musicAudio.pause();btn.textContent='🎵';btn.style.color='';}});
+
+// ── CONTROLS ─────────────────────────────────────────────
+document.getElementById('btn-fs').addEventListener('click',e=>{e.stopPropagation();if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();});
+document.getElementById('btnPrev').addEventListener('click',e=>{e.stopPropagation();goTo(current-1);});
+document.getElementById('btnNext').addEventListener('click',e=>{e.stopPropagation();goTo(current+1);});
+document.addEventListener('click',()=>goTo(current+1));
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();goTo(current+1);}
+  if(e.key==='ArrowLeft'){e.preventDefault();goTo(current-1);}
+  if(e.key==='r'||e.key==='R')goTo(0);
+  if(e.key==='m'||e.key==='M')document.getElementById('btn-voice').click();
+  if(e.key==='n'||e.key==='N')document.getElementById('btn-music').click();
+  if(e.key==='f'||e.key==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+});
+window.addEventListener('resize',scaleStage);
+buildAll();scaleStage();goTo(0);
+</script>
+</body>
+</html>

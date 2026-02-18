@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>El Caso del Dado Trucado — Inspector Sigma</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Special+Elite&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --noir:    #1A1410;
+  --sepia:   #2B231D;
+  --brown:   #3D2F26;
+  --tan:     #8B7355;
+  --amber:   #D4A574;
+  --gold:    #F4D03F;
+  --cream:   #F5E6D3;
+  --green:   #7FB069;
+  --red:     #C0392B;
+  --blue:    #34495E;
+  --c1: #D4A574; /* Caso 1 */
+  --c2: #7FB069; /* Caso 2 */
+  --c3: #E74C3C; /* Caso 3 */
+  --c4: #9B59B6; /* Caso 4 */
+  --c5: #3498DB; /* Caso 5 */
+}
+
+html, body { width:100%; height:100%; background:#0A0805; overflow:hidden; cursor:pointer; }
+
+#stage {
+  position: absolute; width: 1280px; height: 720px;
+  transform-origin: 0 0; overflow: hidden;
+  font-family: 'Courier Prime', monospace;
+}
+
+/* ── NOIR FOG ── */
+.fog {
+  position: absolute; inset: 0;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(42,35,29,.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(42,35,29,.25) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(26,20,16,.95) 0%, rgba(26,20,16,.7) 100%);
+  pointer-events: none;
+}
+
+/* ── PAPER TEXTURE ── */
+.paper-bg {
+  position: absolute; inset: 0;
+  background: var(--sepia);
+  background-image: 
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.03) 2px, rgba(0,0,0,.03) 4px);
+}
+
+/* ── SLIDES ── */
+.slide { position:absolute; inset:0; opacity:0; pointer-events:none; transition: opacity .5s ease; }
+.slide.active { opacity:1; pointer-events:all; }
+
+/* ── SPOTLIGHT ── */
+.spotlight {
+  position: absolute;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244,208,63,.15) 0%, transparent 70%);
+  pointer-events: none;
+  animation: spot-drift 8s ease-in-out infinite;
+}
+@keyframes spot-drift {
+  0%, 100% { transform: translate(-50px, -30px); }
+  50%       { transform: translate(50px, 30px); }
+}
+
+/* ── TYPEWRITER BORDER ── */
+.case-border {
+  position: absolute; inset: 20px;
+  border: 3px double var(--tan);
+  pointer-events: none; z-index: 2;
+}
+.case-border::before, .case-border::after {
+  content: '◆';
+  position: absolute;
+  color: var(--amber);
+  font-size: 18px;
+}
+.case-border::before { top: -12px; left: 20px; }
+.case-border::after  { bottom: -12px; right: 20px; }
+
+/* ── EVIDENCE TRACKER ── */
+.tracker {
+  position: absolute; top: 0; left: 0; right: 0; height: 68px;
+  background: linear-gradient(180deg, rgba(26,20,16,.98) 0%, rgba(26,20,16,.85) 100%);
+  border-bottom: 2px solid rgba(212,165,116,.3);
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 0 20px; z-index: 10;
+}
+.case-btn {
+  width: 140px; height: 50px;
+  border: 2px solid rgba(139,115,85,.4);
+  background: rgba(43,35,29,.6);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: all .4s ease; position: relative;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.3);
+}
+.case-btn::before {
+  content: '📋';
+  position: absolute;
+  top: -8px; right: -8px;
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity .3s;
+}
+.case-btn.active  { background: rgba(212,165,116,.25); border-color: var(--amber); box-shadow: 0 0 15px rgba(244,208,63,.3); }
+.case-btn.solved  { background: rgba(127,176,105,.2); border-color: var(--green); }
+.case-btn.solved::before { opacity: 1; }
+.case-num { font-size: 11px; color: var(--tan); font-family: 'Special Elite', cursive; }
+.case-btn.active .case-num,
+.case-btn.solved .case-num { color: var(--cream); }
+.case-label { font-size: 9px; color: var(--tan); letter-spacing: 1px; margin-top: 2px; }
+
+/* ── DOSSIER PANELS ── */
+.dossier {
+  background: rgba(43,35,29,.85);
+  border: 2px solid rgba(139,115,85,.5);
+  box-shadow: 5px 5px 20px rgba(0,0,0,.6), inset 0 0 30px rgba(0,0,0,.2);
+  position: relative;
+}
+.dossier::before {
+  content: 'CONFIDENCIAL';
+  position: absolute;
+  top: -12px; left: 20px;
+  background: var(--sepia);
+  color: var(--amber);
+  font-size: 8px; letter-spacing: 3px;
+  padding: 0 10px;
+  font-family: 'Special Elite', cursive;
+  border: 1px solid var(--tan);
+}
+.evidence-tag {
+  background: var(--brown);
+  border: 1px solid var(--tan);
+  padding: 4px 12px;
+  font-size: 10px;
+  color: var(--amber);
+  font-family: 'Special Elite', cursive;
+  letter-spacing: 2px;
+  display: inline-block;
+  box-shadow: 2px 2px 8px rgba(0,0,0,.4);
+}
+.solved-stamp {
+  background: rgba(127,176,105,.2);
+  border: 2px solid var(--green);
+  color: var(--green);
+}
+
+/* ── TYPOGRAPHY ── */
+.t-case   { font-family: 'Special Elite', cursive; color: var(--amber); text-shadow: 2px 2px 4px rgba(0,0,0,.7); }
+.t-body   { font-family: 'Courier Prime', monospace; color: var(--cream); line-height: 1.6; }
+.t-fancy  { font-family: 'Playfair Display', serif; color: var(--gold); font-style: italic; }
+.t-data   { font-family: 'Courier Prime', monospace; font-weight: 700; color: var(--amber); }
+.t-green  { color: var(--green); text-shadow: 0 0 10px rgba(127,176,105,.5); }
+
+/* ── ANIMATIONS ── */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .85; }
+}
+@keyframes typewriter {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+.fade-in { animation: fade-in .6s ease-out; }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── NAV BAR ── */
+#nav-bar {
+  position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(26,20,16,.95);
+  border: 2px solid rgba(139,115,85,.4); padding: 6px 16px;
+  z-index: 9999; opacity: 0; transition: opacity .3s;
+  box-shadow: 0 4px 20px rgba(0,0,0,.8);
+}
+#nav-bar:hover, body:hover #nav-bar { opacity: 1; }
+.nav-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--amber); font-size: 16px; padding: 4px 8px;
+  font-family: 'Courier Prime', monospace;
+  transition: color .2s;
+}
+.nav-btn:hover { color: var(--gold); }
+#slide-counter { color: var(--tan); font-size: 11px; font-family:'Courier Prime',monospace; min-width:70px; text-align:center; }
+#progress-line {
+  position: fixed; bottom:0; left:0; height:3px;
+  background: linear-gradient(90deg, var(--brown), var(--amber));
+  transition: width .4s ease; z-index: 9998;
+}
+
+#click-hint {
+  position: absolute; bottom: 18px; left: 0; right: 0; text-align: center;
+  font-family: 'Courier Prime', monospace; font-size: 12px; color: var(--tan);
+  font-style: italic; z-index: 6;
+}
+
+/* ── TABLE STYLING ── */
+.stat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Courier Prime', monospace;
+  font-size: 14px;
+}
+.stat-table th {
+  background: rgba(139,115,85,.3);
+  border: 1px solid var(--tan);
+  padding: 8px 12px;
+  color: var(--amber);
+  text-align: center;
+  font-weight: 700;
+}
+.stat-table td {
+  border: 1px solid rgba(139,115,85,.3);
+  padding: 8px 12px;
+  color: var(--cream);
+  text-align: center;
+}
+.stat-table tr:nth-child(even) { background: rgba(0,0,0,.15); }
+</style>
+</head>
+<body>
+
+<!-- AUDIO EMBEBIDO (generado al final) -->
+<audio id="bgMusic" loop></audio>
+
+<div id="stage"></div>
+
+<div id="nav-bar">
+  <button class="nav-btn" id="btnPrev">◄</button>
+  <span id="slide-counter">1 / 1</span>
+  <button class="nav-btn" id="btnNext">►</button>
+  <button class="nav-btn" id="btn-music" title="Música (M)">🎵</button>
+  <button class="nav-btn" id="btn-fs" title="Pantalla completa">⛶</button>
+</div>
+<div id="progress-line"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+
+const CASE_COLORS = ['','#D4A574','#7FB069','#E74C3C','#9B59B6','#3498DB'];
+const CASE_NAMES  = ['','CASO I','CASO II','CASO III','CASO IV','CASO V'];
+const CASE_LABELS = ['','Media','Moda/Mediana','Tablas','Probabilidad','Dados'];
+
+const SLIDES = [
+  { type:'cover' },
+  { type:'briefing' },
+  { type:'instructions' },
+
+  // CASO I — Media aritmética
+  { type:'sep', caso:1, solved:[],
+    title:'CASO I: EL CÓDIGO DE LA CAJA FUERTE',
+    subtitle:'Media aritmética',
+    desc:'Un ladrón dejó cinco números en una nota. La combinación es la media.',
+    alert:'🔍 EVIDENCIA: Cálculo de promedios' },
+  { type:'q', caso:1, solved:[], eq:1, total:3,
+    context:'El detective encuentra una nota: <strong>8, 12, 6, 10, 14</strong>. La combinación de la caja es la media.',
+    question:'¿Cuál es la media?',
+    data:'8, 12, 6, 10, 14',
+    hint:'Suma todos los valores y divide entre la cantidad de datos (5)' },
+  { type:'s', caso:1, solved:[], eq:1, total:3,
+    data:'8, 12, 6, 10, 14',
+    solution:'Media = 10',
+    method:'(8+12+6+10+14) ÷ 5 = 50 ÷ 5 = 10' },
+  { type:'q', caso:1, solved:[], eq:2, total:3,
+    context:'Otro caso: temperaturas registradas durante 6 días consecutivos.',
+    question:'¿Cuál es la temperatura media?',
+    data:'15°C, 18°C, 12°C, 16°C, 14°C, 19°C',
+    hint:'Suma las 6 temperaturas y divide entre 6' },
+  { type:'s', caso:1, solved:[], eq:2, total:3,
+    data:'15°C, 18°C, 12°C, 16°C, 14°C, 19°C',
+    solution:'Media = 15.67°C',
+    method:'(15+18+12+16+14+19) ÷ 6 = 94 ÷ 6 ≈ 15.67°C' },
+  { type:'q', caso:1, solved:[], eq:3, total:3,
+    context:'Un sospechoso visitó el banco 4 veces. Sacó estas cantidades cada vez.',
+    question:'¿Cuánto sacó en promedio?',
+    data:'250€, 180€, 320€, 210€',
+    hint:'Media = suma total ÷ 4' },
+  { type:'s', caso:1, solved:[], eq:3, total:3,
+    data:'250€, 180€, 320€, 210€',
+    solution:'Media = 240€',
+    method:'(250+180+320+210) ÷ 4 = 960 ÷ 4 = 240€' },
+  { type:'solved', caso:2, solved:[1], cleared:1, next:2 },
+
+  // CASO II — Moda y Mediana
+  { type:'sep', caso:2, solved:[1],
+    title:'CASO II: EL TESTIGO MÁS FRECUENTE',
+    subtitle:'Moda y mediana',
+    desc:'En un robo, varios testigos vieron al sospechoso a distintas horas.',
+    alert:'🔍 EVIDENCIA: Valor más repetido y valor central' },
+  { type:'q', caso:2, solved:[1], eq:1, total:3,
+    context:'Testigos vieron al sospechoso a estas horas: <strong>14:00, 15:00, 14:00, 16:00, 14:00</strong>.',
+    question:'¿Cuál es la MODA (hora más frecuente)?',
+    data:'14:00, 15:00, 14:00, 16:00, 14:00',
+    hint:'La moda es el valor que más se repite' },
+  { type:'s', caso:2, solved:[1], eq:1, total:3,
+    data:'14:00, 15:00, 14:00, 16:00, 14:00',
+    solution:'Moda = 14:00',
+    method:'14:00 aparece 3 veces → es la más frecuente' },
+  { type:'q', caso:2, solved:[1], eq:2, total:3,
+    context:'Las edades de 5 testigos son: <strong>32, 28, 35, 28, 41</strong>.',
+    question:'Calcula la MEDIANA (valor central al ordenarlos).',
+    data:'32, 28, 35, 28, 41',
+    hint:'Ordena los datos de menor a mayor. El del medio es la mediana' },
+  { type:'s', caso:2, solved:[1], eq:2, total:3,
+    data:'32, 28, 35, 28, 41',
+    solution:'Mediana = 32',
+    method:'Ordenados: 28, 28, 32, 35, 41 → el central (3º) es 32' },
+  { type:'q', caso:2, solved:[1], eq:3, total:3,
+    context:'Calzado encontrado en la escena: tallas <strong>42, 39, 42, 40, 42, 38</strong>.',
+    question:'¿Cuál es la MODA?',
+    data:'42, 39, 42, 40, 42, 38',
+    hint:'Busca la talla que aparece más veces' },
+  { type:'s', caso:2, solved:[1], eq:3, total:3,
+    data:'42, 39, 42, 40, 42, 38',
+    solution:'Moda = 42',
+    method:'La talla 42 aparece 3 veces → es la moda' },
+  { type:'solved', caso:3, solved:[1,2], cleared:2, next:3 },
+
+  // CASO III — Tablas de frecuencias
+  { type:'sep', caso:3, solved:[1,2],
+    title:'CASO III: REGISTRO DE LLAMADAS',
+    subtitle:'Tablas de frecuencias',
+    desc:'El sospechoso llamó varias veces a distintos números. Organiza los datos.',
+    alert:'🔍 EVIDENCIA: Frecuencia absoluta y relativa' },
+  { type:'q', caso:3, solved:[1,2], eq:1, total:3,
+    context:'Llamadas del sospechoso a distintos contactos: A(3 veces), B(5 veces), C(2 veces).',
+    question:'¿Cuál es la frecuencia absoluta total?',
+    data:'A: 3, B: 5, C: 2',
+    hint:'Suma todas las frecuencias: 3 + 5 + 2' },
+  { type:'s', caso:3, solved:[1,2], eq:1, total:3,
+    data:'A: 3, B: 5, C: 2',
+    solution:'Total = 10 llamadas',
+    method:'3 + 5 + 2 = 10 llamadas en total' },
+  { type:'q', caso:3, solved:[1,2], eq:2, total:3,
+    context:'De 10 llamadas totales, 5 fueron al contacto B.',
+    question:'¿Qué porcentaje representan las llamadas a B?',
+    data:'5 de 10',
+    hint:'Porcentaje = (5 ÷ 10) × 100' },
+  { type:'s', caso:3, solved:[1,2], eq:2, total:3,
+    data:'5 de 10',
+    solution:'50%',
+    method:'(5 ÷ 10) × 100 = 0.5 × 100 = 50%' },
+  { type:'q', caso:3, solved:[1,2], eq:3, total:3,
+    context:'Tabla de edades de sospechosos: 25(4), 30(6), 35(2). N=12.',
+    question:'¿Cuál es la frecuencia relativa de edad 30?',
+    data:'30 años: 6 de 12',
+    hint:'Fr = frecuencia absoluta ÷ total' },
+  { type:'s', caso:3, solved:[1,2], eq:3, total:3,
+    data:'30 años: 6 de 12',
+    solution:'Fr = 0.5 (o 50%)',
+    method:'6 ÷ 12 = 0.5 → 50%' },
+  { type:'solved', caso:4, solved:[1,2,3], cleared:3, next:4 },
+
+  // CASO IV — Probabilidad básica
+  { type:'sep', caso:4, solved:[1,2,3],
+    title:'CASO IV: LA RULETA DEL CASINO',
+    subtitle:'Probabilidad simple',
+    desc:'Un sospechoso jugó a la ruleta. Calcula sus probabilidades.',
+    alert:'🔍 EVIDENCIA: Casos favorables / casos posibles' },
+  { type:'q', caso:4, solved:[1,2,3], eq:1, total:3,
+    context:'Una baraja tiene 4 ases en 52 cartas.',
+    question:'¿Probabilidad de sacar un as?',
+    data:'4 ases en 52 cartas',
+    hint:'P = casos favorables ÷ casos totales' },
+  { type:'s', caso:4, solved:[1,2,3], eq:1, total:3,
+    data:'4 ases en 52 cartas',
+    solution:'P = 4/52 = 1/13 ≈ 7.7%',
+    method:'4 ÷ 52 = 1/13 ≈ 0.077 = 7.7%' },
+  { type:'q', caso:4, solved:[1,2,3], eq:2, total:3,
+    context:'En una urna hay 3 bolas rojas y 7 azules.',
+    question:'¿Probabilidad de sacar una roja?',
+    data:'3 rojas, 7 azules (total 10)',
+    hint:'P(roja) = 3 ÷ 10' },
+  { type:'s', caso:4, solved:[1,2,3], eq:2, total:3,
+    data:'3 rojas, 7 azules',
+    solution:'P = 3/10 = 30%',
+    method:'3 ÷ 10 = 0.3 = 30%' },
+  { type:'q', caso:4, solved:[1,2,3], eq:3, total:3,
+    context:'Lanzas una moneda al aire.',
+    question:'¿Probabilidad de que salga cara?',
+    data:'2 resultados posibles: cara o cruz',
+    hint:'P = 1 caso favorable ÷ 2 casos posibles' },
+  { type:'s', caso:4, solved:[1,2,3], eq:3, total:3,
+    data:'Cara o cruz',
+    solution:'P = 1/2 = 50%',
+    method:'1 ÷ 2 = 0.5 = 50%' },
+  { type:'solved', caso:5, solved:[1,2,3,4], cleared:4, next:5 },
+
+  // CASO V — Dado trucado
+  { type:'sep', caso:5, solved:[1,2,3,4],
+    title:'CASO V: EL DADO TRUCADO',
+    subtitle:'Probabilidad en dados',
+    desc:'El sospechoso usaba un dado trucado. Descubre las trampas.',
+    alert:'🔍 EVIDENCIA FINAL: Análisis probabilístico' },
+  { type:'q', caso:5, solved:[1,2,3,4], eq:1, total:3,
+    context:'Un dado normal tiene 6 caras. Solo UNA es el 6.',
+    question:'¿Probabilidad de sacar un 6?',
+    data:'1 cara favorable de 6',
+    hint:'P(6) = 1 ÷ 6' },
+  { type:'s', caso:5, solved:[1,2,3,4], eq:1, total:3,
+    data:'1 de 6 caras',
+    solution:'P = 1/6 ≈ 16.7%',
+    method:'1 ÷ 6 ≈ 0.167 = 16.7%' },
+  { type:'q', caso:5, solved:[1,2,3,4], eq:2, total:3,
+    context:'¿Probabilidad de sacar un número PAR (2, 4, 6)?',
+    question:'Calcula P(par).',
+    data:'3 números pares de 6 posibles',
+    hint:'P(par) = 3 ÷ 6' },
+  { type:'s', caso:5, solved:[1,2,3,4], eq:2, total:3,
+    data:'2, 4, 6 = 3 pares',
+    solution:'P = 3/6 = 1/2 = 50%',
+    method:'3 ÷ 6 = 1/2 = 0.5 = 50%' },
+  { type:'q', caso:5, solved:[1,2,3,4], eq:3, total:3,
+    context:'El dado trucado tiene DOS caras con el 6 (quitaron el 1 y pusieron otro 6).',
+    question:'¿Nueva probabilidad de sacar 6?',
+    data:'2 seises de 6 caras',
+    hint:'P(6) = 2 ÷ 6' },
+  { type:'s', caso:5, solved:[1,2,3,4], eq:3, total:3,
+    data:'2 seises de 6 caras',
+    solution:'P = 2/6 = 1/3 ≈ 33.3%',
+    method:'2 ÷ 6 = 1/3 ≈ 0.333 = 33.3% → ¡TRUCADO!' },
+
+  { type:'victory', solved:[1,2,3,4,5] }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function fog() { return `<div class="fog"></div>`; }
+function caseBorder() { return `<div class="case-border"></div>`; }
+function spotlight(x, y) {
+  return `<div class="spotlight" style="left:${x}px;top:${y}px;"></div>`;
+}
+
+function tracker(activeCaso, solvedCasos=[]) {
+  return `<div class="tracker">` +
+    [1,2,3,4,5].map(c => {
+      const solved = solvedCasos.includes(c);
+      const active = activeCaso === c;
+      const cls = solved ? 'solved' : (active ? 'active' : '');
+      return `<div class="case-btn ${cls}">
+        <div class="case-num">${CASE_NAMES[c]}</div>
+        <div class="case-label">${CASE_LABELS[c]}</div>
+      </div>`;
+    }).join('') +
+  `</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERERS
+// ═══════════════════════════════════════════════════════════════
+
+function renderCover() {
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${spotlight(200, 150)}
+  ${spotlight(1000, 450)}
+  ${caseBorder()}
+
+  <div style="position:absolute;top:80px;left:0;right:0;text-align:center;">
+    <div style="font-size:12px;letter-spacing:6px;color:var(--tan);font-family:'Special Elite',cursive;margin-bottom:14px;">DEPARTAMENTO DE INVESTIGACIÓN MATEMÁTICA</div>
+    <div class="t-case" style="font-size:68px;line-height:1.1;">EL CASO<br>DEL DADO TRUCADO</div>
+    <div style="width:480px;height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);margin:20px auto;"></div>
+    <div class="t-fancy" style="font-size:26px;opacity:.95;">Estadística y Probabilidad</div>
+    <div style="font-family:'Courier Prime',monospace;font-size:18px;color:var(--cream);margin-top:16px;opacity:.85;">Inspector Sigma — 1.º ESO</div>
+  </div>
+
+  <!-- Magnifying glass icon -->
+  <div style="position:absolute;top:350px;left:0;right:0;text-align:center;font-size:90px;opacity:.4;filter:drop-shadow(4px 4px 8px rgba(0,0,0,.6));">🔍</div>
+
+  <!-- Case files -->
+  <div class="dossier" style="position:absolute;bottom:80px;left:100px;right:100px;padding:18px 28px;">
+    ${[
+      ['CASOS','5 investigaciones'],
+      ['EVIDENCIAS','15 cálculos'],
+      ['HERRAMIENTAS','Media, moda, probabilidad'],
+      ['ESTADO','ABIERTO'],
+    ].map(([k,v])=>`
+    <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(139,115,85,.2);">
+      <span style="font-family:'Courier Prime',monospace;font-size:11px;color:var(--tan);">${k}</span>
+      <span style="font-family:'Courier Prime',monospace;font-size:11px;color:var(--amber);font-weight:700;">${v}</span>
+    </div>`).join('')}
+  </div>
+
+  <div id="click-hint">— CLIC PARA ABRIR EL EXPEDIENTE —</div>`;
+}
+
+function renderBriefing() {
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${caseBorder()}
+
+  <div style="position:absolute;top:24px;left:0;right:0;text-align:center;">
+    <div class="evidence-tag">INFORME CONFIDENCIAL</div>
+  </div>
+
+  <div style="position:absolute;top:80px;left:100px;width:420px;">
+    <div style="font-size:80px;opacity:.2;">📋</div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:80px;left:560px;right:80px;padding:28px 32px;">
+    <div class="t-body" style="font-size:18px;line-height:1.7;">
+      <p style="color:var(--amber);font-weight:700;">Estimado Inspector Sigma,</p>
+      <br>
+      <p>Hemos detectado irregularidades en varios casos criminales. Los sospechosos usan datos estadísticos y probabilidades para ocultar sus crímenes.</p>
+      <br>
+      <p>Su misión: resolver <strong style="color:var(--gold);">5 casos</strong> usando las herramientas de la estadística descriptiva y el cálculo de probabilidades.</p>
+      <br>
+      <p style="color:var(--red);">⚠ ADVERTENCIA: Un error en los cálculos podría dejar libre al culpable.</p>
+    </div>
+  </div>
+
+  <div class="dossier" style="position:absolute;bottom:60px;left:80px;right:80px;padding:12px 24px;background:rgba(192,57,43,.15);border-color:var(--red);">
+    <div style="font-family:'Courier Prime',monospace;font-size:13px;color:var(--red);text-align:center;font-weight:700;">
+      🚨 EVIDENCIA CRÍTICA: Cada cálculo correcto acerca al sospechoso a la justicia 🚨
+    </div>
+  </div>
+  <div id="click-hint">— CLIC PARA CONTINUAR —</div>`;
+}
+
+function renderInstructions() {
+  const steps = [
+    ['📊','ESTADÍSTICA','Aprenderás a calcular media, moda, mediana y trabajar con tablas de frecuencias.'],
+    ['🎲','PROBABILIDAD','Calcularás probabilidades de eventos simples usando fracciones y porcentajes.'],
+    ['🔍','METODOLOGÍA','Cada caso tiene 3 evidencias (ejercicios). Resuélvelas para cerrar el caso.'],
+    ['📝','FORMATO','Primero aparece la evidencia. Intenta calcularla ANTES de ver la solución.'],
+  ];
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${caseBorder()}
+
+  <div style="position:absolute;top:24px;left:0;right:0;text-align:center;">
+    <div class="evidence-tag">PROTOCOLO DE INVESTIGACIÓN</div>
+  </div>
+
+  <div style="position:absolute;top:90px;left:70px;right:70px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    ${steps.map(([icon,title,desc])=>`
+    <div class="dossier" style="padding:22px 24px;display:flex;gap:16px;">
+      <div style="font-size:36px;flex-shrink:0;">${icon}</div>
+      <div>
+        <div style="font-family:'Special Elite',cursive;font-size:13px;color:var(--amber);margin-bottom:8px;letter-spacing:1px;">${title}</div>
+        <div class="t-body" style="font-size:15px;opacity:.9;">${desc}</div>
+      </div>
+    </div>`).join('')}
+  </div>
+
+  <div class="dossier" style="position:absolute;bottom:60px;left:70px;right:70px;padding:14px 24px;">
+    <div style="display:flex;gap:40px;justify-content:center;align-items:center;">
+      ${[['I','Media'],['II','Moda/Med.'],['III','Tablas'],['IV','Prob.'],['V','Dado']].map(([n,l])=>`
+      <div style="text-align:center;">
+        <div style="font-family:'Special Elite',cursive;font-size:16px;color:${CASE_COLORS[parseInt(n.replace(/[IV]/g,m=>({I:1,V:5})[m]||m.length))]};margin-bottom:4px;">${n}</div>
+        <div style="font-family:'Courier Prime',monospace;font-size:10px;color:var(--tan);">${l}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div id="click-hint">— CLIC PARA COMENZAR LA INVESTIGACIÓN —</div>`;
+}
+
+function renderSep(sl) {
+  const c = CASE_COLORS[sl.caso];
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${spotlight(640, 300)}
+  ${caseBorder()}
+  ${tracker(sl.caso, sl.solved)}
+
+  <div style="position:absolute;top:10px;left:24px;">
+    <div class="evidence-tag" style="background:${c}22;border-color:${c};color:${c};">${CASE_NAMES[sl.caso]}</div>
+  </div>
+
+  <div style="position:absolute;top:88px;left:0;right:0;text-align:center;">
+    <div style="font-size:11px;letter-spacing:5px;color:${c};font-family:'Special Elite',cursive;opacity:.7;margin-bottom:10px;">${CASE_NAMES[sl.caso]} — ${CASE_LABELS[sl.caso].toUpperCase()}</div>
+    <div class="t-case" style="font-size:54px;color:${c};line-height:1.15;">${sl.title}</div>
+    <div style="width:420px;height:1.5px;background:${c};margin:16px auto;opacity:.6;"></div>
+    <div class="t-fancy" style="font-size:24px;color:var(--cream);">${sl.subtitle}</div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:330px;left:120px;right:120px;padding:24px 32px;border-color:${c}66;">
+    <div class="t-body" style="font-size:17px;text-align:center;line-height:1.6;">
+      ${sl.desc}
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:70px;left:0;right:0;text-align:center;">
+    <div class="evidence-tag" style="background:rgba(212,165,116,.15);font-size:11px;">${sl.alert}</div>
+  </div>
+  <div id="click-hint">— CLIC PARA EXAMINAR LAS EVIDENCIAS —</div>`;
+}
+
+function renderQuestion(sl) {
+  const c = CASE_COLORS[sl.caso];
+  const isLast = sl.eq === sl.total;
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${caseBorder()}
+  ${tracker(sl.caso, sl.solved)}
+
+  <div style="position:absolute;top:82px;left:30px;right:30px;display:flex;justify-content:space-between;align-items:center;">
+    <div class="evidence-tag" style="background:${c}22;border-color:${c};color:${c};">EVIDENCIA ${sl.eq} / ${sl.total}</div>
+    <div class="evidence-tag" style="background:rgba(139,115,85,.2);">✏ CALCULA TÚ</div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:128px;left:30px;right:30px;padding:16px 24px;border-color:${c}44;">
+    <div class="t-body" style="font-size:17px;">${sl.context}</div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:228px;left:30px;right:30px;height:280px;border-color:${c};border-width:3px;box-shadow:0 0 20px ${c}33;">
+    <div style="position:absolute;top:14px;left:20px;font-family:'Special Elite',cursive;font-size:10px;color:${c};letter-spacing:2px;">[ ${sl.question} ]</div>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding-top:20px;">
+      <div style="font-family:'Courier Prime',monospace;font-size:38px;font-weight:700;color:var(--amber);">${sl.data}</div>
+    </div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:522px;left:30px;right:30px;height:52px;display:flex;align-items:center;padding:0 20px;background:rgba(127,176,105,.1);border-color:var(--green);">
+    <span style="font-size:16px;margin-right:10px;">💡</span>
+    <span class="t-body" style="font-size:14px;color:rgba(245,230,211,.9);font-style:italic;">${sl.hint}</span>
+  </div>
+
+  <div id="click-hint">— CLIC PARA VER LA SOLUCIÓN —</div>`;
+}
+
+function renderSolution(sl) {
+  const isLast = sl.eq === sl.total;
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${caseBorder()}
+  ${tracker(sl.caso, sl.solved)}
+
+  <div style="position:absolute;top:82px;left:30px;right:30px;display:flex;justify-content:space-between;align-items:center;">
+    <div class="evidence-tag">EVIDENCIA ${sl.eq} / ${sl.total}</div>
+    <div class="evidence-tag solved-stamp">✅ RESUELTA</div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:128px;left:30px;right:30px;height:90px;display:flex;align-items:center;justify-content:center;opacity:.7;">
+    <div style="text-align:center;">
+      <div style="font-family:'Courier Prime',monospace;font-size:10px;color:var(--tan);margin-bottom:6px;">DATOS:</div>
+      <div style="font-family:'Courier Prime',monospace;font-size:22px;color:var(--cream);">${sl.data}</div>
+    </div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:232px;left:30px;right:30px;height:260px;border-color:var(--green);border-width:3px;background:rgba(127,176,105,.08);box-shadow:0 0 25px rgba(127,176,105,.2);">
+    <div style="position:absolute;top:14px;left:20px;font-family:'Special Elite',cursive;font-size:10px;color:var(--green);letter-spacing:2px;">[ SOLUCIÓN VERIFICADA ]</div>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding-top:20px;">
+      <div class="t-green" style="font-family:'Courier Prime',monospace;font-size:48px;font-weight:700;">${sl.solution}</div>
+    </div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:506px;left:30px;right:30px;height:52px;display:flex;align-items:center;padding:0 20px;background:rgba(127,176,105,.1);">
+    <span style="font-size:14px;margin-right:8px;">🔬</span>
+    <span style="font-family:'Courier Prime',monospace;font-size:13px;color:rgba(127,176,105,.9);">${sl.method}</span>
+  </div>
+
+  <div id="click-hint" style="color:${isLast?'var(--green)':'var(--tan)'};">
+    — ${isLast ? '¡CASO RESUELTO! → SIGUIENTE CASO' : `CONTINÚA CON EVIDENCIA ${sl.eq+1}`} —
+  </div>`;
+}
+
+function renderSolved(sl) {
+  const c = CASE_COLORS[sl.next];
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${spotlight(640, 300)}
+  ${caseBorder()}
+  ${tracker(sl.next, sl.solved)}
+
+  <div style="position:absolute;inset:22px;border:2px dashed var(--green);opacity:.4;"></div>
+
+  <div style="position:absolute;top:140px;left:0;right:0;text-align:center;font-size:90px;opacity:.8;">✅</div>
+
+  <div style="position:absolute;top:250px;left:0;right:0;text-align:center;">
+    <div class="t-case" style="font-size:52px;color:var(--green);">CASO CERRADO</div>
+    <div style="width:300px;height:1px;background:var(--green);margin:14px auto;opacity:.5;"></div>
+    <div class="t-body" style="font-size:20px;color:var(--cream);font-style:italic;">Caso ${sl.cleared} resuelto. ¡Excelente trabajo, Inspector!</div>
+  </div>
+
+  <div class="dossier" style="position:absolute;top:410px;left:200px;right:200px;height:58px;display:flex;align-items:center;justify-content:center;border-color:${c};background:${c}15;">
+    <div style="font-family:'Special Elite',cursive;font-size:14px;color:${c};letter-spacing:2px;">
+      ▶ ABRIENDO CASO ${sl.next}: ${CASE_NAMES[sl.next]}
+    </div>
+  </div>
+
+  <div id="click-hint" style="color:var(--green);">— CLIC PARA CONTINUAR LA INVESTIGACIÓN —</div>`;
+}
+
+function renderVictory() {
+  return `
+  <div class="paper-bg"></div>
+  ${fog()}
+  ${spotlight(200, 200)}
+  ${spotlight(1000, 400)}
+  ${caseBorder()}
+  ${tracker(0, [1,2,3,4,5])}
+
+  <div style="position:absolute;inset:22px;border:3px double var(--gold);opacity:.5;"></div>
+
+  <div style="position:absolute;top:90px;left:0;right:0;text-align:center;">
+    <div style="font-size:14px;letter-spacing:5px;color:var(--tan);font-family:'Special Elite',cursive;margin-bottom:10px;">[ MISIÓN CUMPLIDA ]</div>
+    <div class="t-case" style="font-size:64px;line-height:1.1;color:var(--gold);">¡¡ CULPABLE<br>ARRESTADO !!</div>
+  </div>
+
+  <div style="position:absolute;top:270px;left:140px;right:140px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);"></div>
+
+  <div style="position:absolute;top:290px;left:100px;right:100px;text-align:center;">
+    <div class="t-body" style="font-size:18px;line-height:1.7;font-style:italic;opacity:.95;">
+      El Inspector Sigma ha resuelto los 5 casos usando estadística y probabilidad.<br>
+      El dado trucado fue confiscado y el culpable está tras las rejas.
+    </div>
+  </div>
+
+  <div style="position:absolute;top:400px;left:0;right:0;text-align:center;font-size:46px;">⭐ ⭐ ⭐ ⭐ ⭐</div>
+
+  <div class="dossier solved-stamp" style="position:absolute;top:470px;left:240px;right:240px;height:52px;display:flex;align-items:center;justify-content:center;">
+    <span style="font-family:'Courier Prime',monospace;font-size:12px;color:var(--green);font-weight:700;letter-spacing:1px;">5/5 CASOS ✓ · 15/15 EVIDENCIAS ✓ · INVESTIGACIÓN COMPLETADA</span>
+  </div>
+
+  <div class="dossier" style="position:absolute;bottom:52px;left:100px;right:100px;padding:14px 24px;border-color:var(--gold);">
+    <div class="t-fancy" style="font-size:17px;text-align:center;color:var(--gold);">
+      "La justicia siempre triunfa cuando los números no mienten." — Inspector Sigma
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:16px;left:0;right:0;text-align:center;font-family:'Courier Prime',monospace;font-size:11px;color:var(--tan);">
+    Pulsa R para reiniciar la investigación
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+const stage = document.getElementById('stage');
+let current = 0;
+let slideEls = [];
+
+function getHTML(sl) {
+  switch(sl.type) {
+    case 'cover':        return renderCover();
+    case 'briefing':     return renderBriefing();
+    case 'instructions': return renderInstructions();
+    case 'sep':          return renderSep(sl);
+    case 'q':            return renderQuestion(sl);
+    case 's':            return renderSolution(sl);
+    case 'solved':       return renderSolved(sl);
+    case 'victory':      return renderVictory();
+    default:             return '';
+  }
+}
+
+function buildAll() {
+  stage.innerHTML = '';
+  slideEls = [];
+  SLIDES.forEach((sl, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML = getHTML(sl);
+    stage.appendChild(el);
+    slideEls.push(el);
+  });
+}
+
+function goTo(idx) {
+  if (idx < 0 || idx >= SLIDES.length) return;
+  slideEls[current].classList.remove('active');
+  current = idx;
+  slideEls[current].classList.add('active');
+  updateUI();
+}
+
+function updateUI() {
+  document.getElementById('slide-counter').textContent = `${current+1} / ${SLIDES.length}`;
+  document.getElementById('progress-line').style.width = ((current+1)/SLIDES.length*100) + '%';
+}
+
+function scaleStage() {
+  const scale = Math.min(window.innerWidth/1280, window.innerHeight/720);
+  const ox = (window.innerWidth  - 1280*scale)/2;
+  const oy = (window.innerHeight - 720 *scale)/2;
+  stage.style.transform = `translate(${ox}px,${oy}px) scale(${scale})`;
+}
+
+// ── AUDIO GENERATION ────────────────────────────────────────────
+// Generate noir jazz ambient using Web Audio API
+function generateNoirMusic() {
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const duration = 30; // 30 seconds loop
+  const sampleRate = audioCtx.sampleRate;
+  const buffer = audioCtx.createBuffer(2, sampleRate * duration, sampleRate);
+  
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    
+    // Bass drone (low rumble)
+    for (let i = 0; i < data.length; i++) {
+      const t = i / sampleRate;
+      const bass = Math.sin(2 * Math.PI * 55 * t) * 0.08; // A1 note
+      const bass2 = Math.sin(2 * Math.PI * 82.41 * t) * 0.06; // E2 note
+      
+      // Slow pad (mystery vibe)
+      const pad = Math.sin(2 * Math.PI * 220 * t * (1 + 0.02 * Math.sin(t * 0.5))) * 0.03;
+      
+      // Vinyl crackle (noise)
+      const noise = (Math.random() - 0.5) * 0.01;
+      
+      // Envelope (fade in/out for loop)
+      const env = Math.min(1, Math.min(t * 2, (duration - t) * 2));
+      
+      data[i] = (bass + bass2 + pad + noise) * env;
+    }
+  }
+  
+  // Convert to WAV and set as source
+  const audioBlob = bufferToWave(buffer, sampleRate);
+  const audioUrl = URL.createObjectURL(audioBlob);
+  document.getElementById('bgMusic').src = audioUrl;
+}
+
+function bufferToWave(abuffer, sampleRate) {
+  const numOfChan = abuffer.numberOfChannels;
+  const length = abuffer.length * numOfChan * 2 + 44;
+  const buffer = new ArrayBuffer(length);
+  const view = new DataView(buffer);
+  const channels = [];
+  let offset = 0;
+  let pos = 0;
+
+  // write WAVE header
+  setUint32(0x46464952); // "RIFF"
+  setUint32(length - 8); // file length - 8
+  setUint32(0x45564157); // "WAVE"
+  
+  setUint32(0x20746d66); // "fmt " chunk
+  setUint32(16);         // length = 16
+  setUint16(1);          // PCM (uncompressed)
+  setUint16(numOfChan);
+  setUint32(sampleRate);
+  setUint32(sampleRate * 2 * numOfChan); // avg. bytes/sec
+  setUint16(numOfChan * 2);              // block-align
+  setUint16(16);         // 16-bit
+
+  setUint32(0x61746164); // "data" - chunk
+  setUint32(length - pos - 4); // chunk length
+
+  // write interleaved data
+  for (let i = 0; i < abuffer.numberOfChannels; i++)
+    channels.push(abuffer.getChannelData(i));
+
+  while (pos < length) {
+    for (let i = 0; i < numOfChan; i++) {
+      let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+      view.setInt16(pos, sample, true);
+      pos += 2;
+    }
+    offset++;
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
+
+  function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+  function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+}
+
+// Music controls
+let musicEnabled = false;
+const audio = document.getElementById('bgMusic');
+audio.volume = 0.25; // Quiet background
+
+document.getElementById('btn-music').addEventListener('click', e => {
+  e.stopPropagation();
+  musicEnabled = !musicEnabled;
+  const btn = document.getElementById('btn-music');
+  
+  if (musicEnabled) {
+    if (!audio.src) generateNoirMusic();
+    audio.play().catch(() => {});
+    btn.textContent = '🔊';
+    btn.style.color = 'var(--green)';
+  } else {
+    audio.pause();
+    btn.textContent = '🔇';
+    btn.style.color = 'var(--tan)';
+  }
+});
+
+document.getElementById('btn-fs').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+});
+
+document.getElementById('btnPrev').addEventListener('click', e => { e.stopPropagation(); goTo(current-1); });
+document.getElementById('btnNext').addEventListener('click', e => { e.stopPropagation(); goTo(current+1); });
+document.addEventListener('click', () => goTo(current+1));
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key===' ') { e.preventDefault(); goTo(current+1); }
+  if (e.key==='ArrowLeft')                { e.preventDefault(); goTo(current-1); }
+  if (e.key==='r'||e.key==='R')           { goTo(0); }
+  if (e.key==='m'||e.key==='M')           { document.getElementById('btn-music').click(); }
+  if (e.key==='f'||e.key==='F')           {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+});
+
+window.addEventListener('resize', scaleStage);
+
+buildAll();
+scaleStage();
+goTo(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>El Laberinto del Minotauro</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --stone:   #12100A;
+    --stone2:  #1E1A12;
+    --stone3:  #2D2820;
+    --gold:    #C8A84B;
+    --amber:   #D4851A;
+    --flame:   #FF6B1A;
+    --cream:   #F2E8C9;
+    --green:   #2DCC70;
+    --red:     #8B1A1A;
+    --muted:   #7A6E5A;
+    --c1: #D4851A;  /* Sala 1 amber */
+    --c2: #2980B9;  /* Sala 2 blue  */
+    --c3: #8E44AD;  /* Sala 3 purple*/
+    --c4: #8B1A1A;  /* Sala 4 red   */
+    --c5: #16A085;  /* Sala 5 teal  */
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #0A0806;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  /* ── STAGE (fixed 1280×720, scaled via JS) ── */
+  #stage {
+    position: absolute;
+    width: 1280px;
+    height: 720px;
+    transform-origin: 0 0;
+    overflow: hidden;
+    font-family: 'Cinzel', serif;
+  }
+
+  /* ── STONE TEXTURE ── */
+  .stone-bg {
+    position: absolute; inset: 0;
+    background-color: var(--stone);
+    background-image:
+      repeating-linear-gradient(0deg,   transparent 0, transparent 71px, rgba(0,0,0,.4) 71px, rgba(0,0,0,.4) 72px),
+      repeating-linear-gradient(90deg,  transparent 0, transparent 159px, rgba(0,0,0,.25) 159px, rgba(0,0,0,.25) 160px);
+  }
+  .stone-bg::after {
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at 15% 20%, rgba(40,30,15,.6) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 80%, rgba(20,14,8,.7) 0%, transparent 55%);
+  }
+
+  /* ── SLIDES ── */
+  .slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .45s ease;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ── GREEK BORDER ── */
+  .greek-frame {
+    position: absolute;
+    inset: 14px;
+    border: 2.5px solid var(--gold);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .greek-frame::before {
+    content:'';
+    position:absolute; inset: 5px;
+    border: 1px solid rgba(212,133,26,.4);
+  }
+  .corner {
+    position:absolute;
+    width:20px; height:20px;
+    background: var(--gold);
+    z-index: 3;
+  }
+  .corner.tl { top:-2px; left:-2px; }
+  .corner.tr { top:-2px; right:-2px; }
+  .corner.bl { bottom:-2px; left:-2px; }
+  .corner.br { bottom:-2px; right:-2px; }
+
+  /* ── TRACKER ── */
+  .tracker {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: rgba(12,9,5,.95);
+    border-bottom: 1px solid rgba(200,168,75,.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 10;
+    padding: 0 20px;
+  }
+  .door-btn {
+    width: 130px; height: 48px;
+    border-radius: 3px;
+    border: 1.5px solid #3A3428;
+    background: #1A1510;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all .4s ease;
+    overflow: hidden;
+  }
+  .door-btn.active   { background: var(--amber); border-color: var(--amber); }
+  .door-btn.done     { background: var(--green);  border-color: #1A7A45; }
+  .door-roman  { font-size: 16px; font-weight: 700; color: var(--muted); line-height:1; }
+  .door-btn.active .door-roman,
+  .door-btn.done   .door-roman  { color: var(--stone); }
+  .door-sub { font-size: 9px; color: var(--muted); font-family: 'Crimson Text', serif; }
+  .door-btn.active .door-sub,
+  .door-btn.done   .door-sub    { color: var(--stone); }
+
+  /* ── TORCH ── */
+  .torch {
+    position: absolute;
+    width: 28px;
+    z-index: 5;
+  }
+  .torch-handle { width: 8px; height: 44px; background: #5C3D1A; margin: 0 auto; border-radius: 2px; }
+  .torch-cup    { width: 22px; height: 14px; background: var(--amber); margin: 0 auto -4px; border-radius: 2px 2px 0 0; }
+  .torch-flame  {
+    width: 18px; height: 34px;
+    margin: 0 auto;
+    position: relative;
+    transform-origin: bottom center;
+    animation: flicker 0.25s ease-in-out infinite alternate;
+  }
+  .torch-flame::before {
+    content:'';
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at 50% 90%, var(--flame) 0%, #FFCC00 40%, transparent 70%);
+    border-radius: 50% 50% 30% 30%;
+  }
+  .torch-flame::after {
+    content:'';
+    position:absolute;
+    top:6px; left:4px; right:4px; bottom:4px;
+    background: rgba(255,243,160,.6);
+    border-radius: 50%;
+    animation: glow .4s ease-in-out infinite alternate;
+  }
+  @keyframes flicker {
+    0%   { transform: scaleY(1)    scaleX(1)    rotate(-1deg); }
+    30%  { transform: scaleY(.92)  scaleX(1.08) rotate(1deg); }
+    60%  { transform: scaleY(1.08) scaleX(.94)  rotate(-2deg); }
+    100% { transform: scaleY(.95)  scaleX(1.05) rotate(1.5deg); }
+  }
+  @keyframes glow {
+    from { opacity:.5; }
+    to   { opacity:1; }
+  }
+
+  /* ── TYPOGRAPHY HELPERS ── */
+  .title-xl  { font-size: 72px; font-weight: 900; letter-spacing: 2px; color: var(--gold); font-family:'Cinzel',serif; text-shadow: 0 4px 20px rgba(0,0,0,.8); }
+  .title-lg  { font-size: 52px; font-weight: 700; color: var(--gold); font-family:'Cinzel',serif; text-shadow: 0 4px 20px rgba(0,0,0,.8); }
+  .title-md  { font-size: 32px; font-weight: 700; color: var(--cream); font-family:'Cinzel',serif; }
+  .body-text { font-family: 'Crimson Text', serif; font-size: 20px; color: var(--cream); line-height:1.55; }
+  .eq-text   { font-family: 'Crimson Text', serif; font-size: 64px; font-weight: 600; color: var(--cream); text-shadow: 0 3px 15px rgba(0,0,0,.7); }
+  .sol-text  { font-family: 'Crimson Text', serif; font-size: 76px; font-weight: 700; color: var(--green); text-shadow: 0 4px 20px rgba(0,0,0,.8); }
+
+  /* ── PANELS ── */
+  .panel {
+    border-radius: 2px;
+    background: rgba(18,14,8,.65);
+    border: 2px solid var(--gold);
+  }
+  .panel-green {
+    border-radius: 2px;
+    background: rgba(8,30,10,.7);
+    border: 2.5px solid var(--green);
+  }
+  .panel-muted {
+    border-radius: 2px;
+    background: rgba(18,14,8,.5);
+    border: 1px solid rgba(122,110,90,.35);
+  }
+  .hint-bar {
+    border-radius: 2px;
+    background: rgba(13,34,13,.8);
+    border: 1px solid rgba(45,204,112,.4);
+  }
+  .danger-bar {
+    border-radius: 2px;
+    background: rgba(80,10,10,.6);
+    border: 1px solid rgba(200,50,50,.5);
+  }
+
+  /* ── BADGE ── */
+  .badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    padding: 5px 16px;
+    border-radius: 2px;
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    font-family:'Cinzel',serif;
+  }
+  .badge-gold   { background: var(--gold);  color: var(--stone); }
+  .badge-green  { background: rgba(27,92,27,.8); color: var(--green); border: 1px solid var(--green); }
+  .badge-amber  { background: rgba(212,133,26,.3); color: var(--cream); border: 1px solid var(--amber); }
+
+  /* ── SALA BAND ── */
+  .sala-band {
+    position:absolute;
+    left:30px; right:30px;
+    height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; letter-spacing:3px; color: var(--cream);
+    opacity:.9;
+  }
+
+  /* ── NAVIGATION UI ── */
+  #nav-bar {
+    position: fixed;
+    bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(12,9,5,.9);
+    border: 1px solid rgba(200,168,75,.3);
+    border-radius: 24px;
+    padding: 6px 16px;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  #nav-bar:hover, body:hover #nav-bar { opacity: 1; }
+  .nav-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--gold); font-size: 18px; padding: 4px 8px;
+    font-family:'Cinzel',serif;
+    transition: color .2s;
+  }
+  .nav-btn:hover { color: var(--cream); }
+  #slide-counter { color: var(--muted); font-size: 11px; font-family:'Cinzel',serif; min-width: 60px; text-align:center; }
+  #btn-fs { font-size:14px; }
+
+  /* ── PUERTA ABIERTA / VICTORY animations ── */
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 20px rgba(45,204,112,.4); }
+    50%       { box-shadow: 0 0 50px rgba(45,204,112,.8); }
+  }
+  .frame-green {
+    position:absolute; inset:14px;
+    border: 3px solid var(--green);
+    animation: pulse-green 2s ease-in-out infinite;
+    pointer-events:none; z-index:2;
+  }
+  @keyframes star-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .star-glow { display:inline-block; filter: drop-shadow(0 0 8px var(--gold)); }
+
+  /* ── KEY ANIMATION ── */
+  @keyframes key-float {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50%       { transform: translateY(-18px) rotate(5deg); }
+  }
+  .key-icon { animation: key-float 2.5s ease-in-out infinite; display:inline-block; }
+
+  /* ── PROGRESS BAR (slides) ── */
+  #progress-line {
+    position: fixed;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--amber), var(--gold));
+    transition: width .4s ease;
+    z-index: 9998;
+    border-radius: 0 3px 3px 0;
+  }
+
+  /* ── CLICK HINT ── */
+  #click-hint {
+    position:absolute;
+    bottom: 16px; left:0; right:0;
+    text-align:center;
+    font-family:'Crimson Text', serif;
+    font-size:14px; color: var(--muted);
+    font-style: italic;
+    opacity:.7;
+    z-index:6;
+  }
+</style>
+</head>
+<body>
+
+<!-- AUDIO: Para añadir música, descomenta la línea siguiente y cambia "tu-archivo.mp3" por la ruta a tu MP3 -->
+<audio id="bgMusic" loop>
+  <!-- <source src="tu-archivo.mp3" type="audio/mpeg"> -->
+</audio>
+
+<div id="stage"></div>
+
+<div id="nav-bar">
+  <button class="nav-btn" id="btnPrev">←</button>
+  <span id="slide-counter">1 / 43</span>
+  <button class="nav-btn" id="btnNext">→</button>
+  <button class="nav-btn" id="btn-fs" title="Pantalla completa">⛶</button>
+</div>
+
+<div id="progress-line"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+
+const ROOM_COLORS = ['', '#D4851A','#2980B9','#8E44AD','#8B1A1A','#16A085'];
+const ROOM_NAMES  = ['', 'INICIADO','APRENDIZ','GUERRERO','HÉROE','MAESTRO'];
+const ROOM_ROMAN  = ['', 'I','II','III','IV','V'];
+const ROOM_LABELS_SHORT = ['', 'Iniciado','Aprendiz','Guerrero','Héroe','Maestro'];
+
+// Slide definitions
+const SLIDES = [
+  // 0 Cover
+  { type:'cover', room:0, done:[] },
+  // 1 Narrative
+  { type:'narrative', room:0, done:[] },
+  // 2 Instructions
+  { type:'instructions', room:0, done:[] },
+  // 3 Separator Sala 1
+  { type:'sep', room:1, done:[],
+    title:'INICIADO', subtitle:'Ecuaciones directas', tipo:'TIPO:  x ± a = b',
+    lema:'Aísla la incógnita llevando el número al otro lado' },
+  // 4-9: Sala 1 exercises
+  { type:'q', room:1, done:[], eq:1, total:3, equation:'x + 7 = 15', hint:'Resta 7 en ambos lados' },
+  { type:'s', room:1, done:[], eq:1, total:3, equation:'x + 7 = 15', solution:'x = 8' },
+  { type:'q', room:1, done:[], eq:2, total:3, equation:'x – 4 = 11', hint:'Suma 4 en ambos lados' },
+  { type:'s', room:1, done:[], eq:2, total:3, equation:'x – 4 = 11', solution:'x = 15' },
+  { type:'q', room:1, done:[], eq:3, total:3, equation:'20 – x = 7', hint:'Súmale x en ambos lados: 20 = 7 + x → x = 20 – 7' },
+  { type:'s', room:1, done:[], eq:3, total:3, equation:'20 – x = 7', solution:'x = 13' },
+  // 10 Door 1→2
+  { type:'door', room:2, done:[1], cleared:1, next:2 },
+  // 11 Separator Sala 2
+  { type:'sep', room:2, done:[1],
+    title:'APRENDIZ', subtitle:'Multiplicación y división', tipo:'TIPO:  ax = b   /   x ÷ a = b',
+    lema:'Divide o multiplica ambos lados por el mismo número' },
+  // 12-17: Sala 2
+  { type:'q', room:2, done:[1], eq:1, total:3, equation:'3x = 18', hint:'Divide ambos lados entre 3' },
+  { type:'s', room:2, done:[1], eq:1, total:3, equation:'3x = 18', solution:'x = 6' },
+  { type:'q', room:2, done:[1], eq:2, total:3, equation:'x ÷ 5 = 4', hint:'Multiplica ambos lados por 5' },
+  { type:'s', room:2, done:[1], eq:2, total:3, equation:'x ÷ 5 = 4', solution:'x = 20' },
+  { type:'q', room:2, done:[1], eq:3, total:3, equation:'4x = 28', hint:'Divide ambos lados entre 4' },
+  { type:'s', room:2, done:[1], eq:3, total:3, equation:'4x = 28', solution:'x = 7' },
+  // 18 Door 2→3
+  { type:'door', room:3, done:[1,2], cleared:2, next:3 },
+  // 19 Separator Sala 3
+  { type:'sep', room:3, done:[1,2],
+    title:'GUERRERO', subtitle:'Dos operaciones', tipo:'TIPO:  ax + b = c',
+    lema:'Primero aísla el término con x, luego despeja x' },
+  // 20-25: Sala 3
+  { type:'q', room:3, done:[1,2], eq:1, total:3, equation:'2x + 5 = 13', hint:'Resta 5 → divide entre 2' },
+  { type:'s', room:3, done:[1,2], eq:1, total:3, equation:'2x + 5 = 13', solution:'x = 4' },
+  { type:'q', room:3, done:[1,2], eq:2, total:3, equation:'3x – 7 = 8', hint:'Suma 7 → divide entre 3' },
+  { type:'s', room:3, done:[1,2], eq:2, total:3, equation:'3x – 7 = 8', solution:'x = 5' },
+  { type:'q', room:3, done:[1,2], eq:3, total:3, equation:'5x + 3 = 28', hint:'Resta 3 → divide entre 5' },
+  { type:'s', room:3, done:[1,2], eq:3, total:3, equation:'5x + 3 = 28', solution:'x = 5' },
+  // 26 Door 3→4
+  { type:'door', room:4, done:[1,2,3], cleared:3, next:4 },
+  // 27 Separator Sala 4
+  { type:'sep', room:4, done:[1,2,3],
+    title:'HÉROE', subtitle:'Incógnita en ambos lados', tipo:'TIPO:  ax + b = cx + d',
+    lema:'Agrupa las x en un lado y los números en el otro' },
+  // 28-33: Sala 4
+  { type:'q', room:4, done:[1,2,3], eq:1, total:3, equation:'4x + 2 = 2x + 10', hint:'Pasa 2x al izquierdo → 2x + 2 = 10 → 2x = 8' },
+  { type:'s', room:4, done:[1,2,3], eq:1, total:3, equation:'4x + 2 = 2x + 10', solution:'x = 4' },
+  { type:'q', room:4, done:[1,2,3], eq:2, total:3, equation:'5x – 3 = 2x + 9', hint:'Agrupa: 5x – 2x = 9 + 3 → 3x = 12' },
+  { type:'s', room:4, done:[1,2,3], eq:2, total:3, equation:'5x – 3 = 2x + 9', solution:'x = 4' },
+  { type:'q', room:4, done:[1,2,3], eq:3, total:3, equation:'7x + 1 = 3x + 17', hint:'Agrupa: 7x – 3x = 17 – 1 → 4x = 16' },
+  { type:'s', room:4, done:[1,2,3], eq:3, total:3, equation:'7x + 1 = 3x + 17', solution:'x = 4' },
+  // 34 Door 4→5
+  { type:'door', room:5, done:[1,2,3,4], cleared:4, next:5 },
+  // 35 Separator Sala 5
+  { type:'sep', room:5, done:[1,2,3,4],
+    title:'MAESTRO', subtitle:'Propiedad distributiva', tipo:'TIPO:  a(x + b) = c',
+    lema:'Aplica la distributiva primero, luego resuelve como siempre' },
+  // 36-41: Sala 5
+  { type:'q', room:5, done:[1,2,3,4], eq:1, total:3, equation:'3(x + 4) = 21', hint:'Distributiva: 3x + 12 = 21 → 3x = 9' },
+  { type:'s', room:5, done:[1,2,3,4], eq:1, total:3, equation:'3(x + 4) = 21', solution:'x = 3' },
+  { type:'q', room:5, done:[1,2,3,4], eq:2, total:3, equation:'2(3x – 1) = 16', hint:'Distributiva: 6x – 2 = 16 → 6x = 18' },
+  { type:'s', room:5, done:[1,2,3,4], eq:2, total:3, equation:'2(3x – 1) = 16', solution:'x = 3' },
+  { type:'q', room:5, done:[1,2,3,4], eq:3, total:3, equation:'4(x+2) – x = 14', hint:'Distributiva: 4x + 8 – x = 14 → 3x = 6' },
+  { type:'s', room:5, done:[1,2,3,4], eq:3, total:3, equation:'4(x+2) – x = 14', solution:'x = 2' },
+  // 42 Victory
+  { type:'victory', room:0, done:[1,2,3,4,5] }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function torches(y1=100, y2=580) {
+  const t = (x, y, flip) => `
+    <div class="torch" style="position:absolute;left:${x}px;top:${y}px;text-align:center;">
+      <div class="torch-flame"></div>
+      <div class="torch-cup"></div>
+      <div class="torch-handle"></div>
+    </div>`;
+  return t(38, y1) + t(1214, y1) + (y2 ? t(38, y2) + t(1214, y2) : '');
+}
+
+function greekBorder() {
+  return `<div class="greek-frame">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+  </div>`;
+}
+
+function tracker(activeRoom, doneRooms=[]) {
+  return `<div class="tracker">` +
+    [1,2,3,4,5].map(r => {
+      const isDone   = doneRooms.includes(r);
+      const isActive = activeRoom === r;
+      const cls = isDone ? 'done' : (isActive ? 'active' : '');
+      return `<div class="door-btn ${cls}">
+        <div class="door-roman">${isDone ? '✓' : ROOM_ROMAN[r]}</div>
+        <div class="door-sub">${ROOM_LABELS_SHORT[r]}</div>
+      </div>`;
+    }).join('') +
+  `</div>`;
+}
+
+function salaBand(room) {
+  const c = ROOM_COLORS[room];
+  return `<div class="sala-band" style="top:80px;background:linear-gradient(90deg,transparent,${c}40,${c}55,${c}40,transparent);border-top:1px solid ${c}50;border-bottom:1px solid ${c}50;letter-spacing:3px;">
+    SALA ${ROOM_ROMAN[room]} · ${ROOM_NAMES[room]}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SLIDE RENDERERS
+// ═══════════════════════════════════════════════════════════════
+
+function renderCover() {
+  return `
+  <div class="stone-bg"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(40,30,15,.4) 0%,rgba(8,6,3,.7) 100%);"></div>
+  ${greekBorder()}
+  <!-- Extra inner frame -->
+  <div style="position:absolute;inset:28px;border:1px solid rgba(200,168,75,.3);pointer-events:none;"></div>
+  ${torches(100, 480)}
+
+  <!-- Sup label -->
+  <div style="position:absolute;top:42px;left:0;right:0;text-align:center;font-size:11px;color:var(--amber);letter-spacing:6px;font-weight:700;">
+    E S C A P E &nbsp; R O O M &nbsp; D E &nbsp; M A T E M Á T I C A S
+  </div>
+
+  <!-- Main title -->
+  <div style="position:absolute;top:140px;left:120px;right:120px;text-align:center;">
+    <div style="font-size:90px;font-weight:900;color:var(--gold);letter-spacing:4px;line-height:.95;text-shadow:0 6px 30px rgba(0,0,0,.9);">EL LABERINTO</div>
+    <div style="font-size:44px;font-weight:700;color:var(--cream);letter-spacing:8px;margin-top:12px;text-shadow:0 4px 20px rgba(0,0,0,.8);">DEL MINOTAURO</div>
+  </div>
+
+  <!-- Divider -->
+  <div style="position:absolute;top:362px;left:200px;right:200px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);"></div>
+
+  <!-- Subtitle -->
+  <div style="position:absolute;top:378px;left:0;right:0;text-align:center;font-family:'Crimson Text',serif;font-size:22px;color:var(--amber);font-style:italic;">
+    ⚡&ensp;Ecuaciones de 1.º grado&ensp;⚡
+  </div>
+
+  <!-- Bottom bar -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:52px;background:rgba(10,8,4,.95);border-top:1px solid rgba(200,168,75,.25);display:flex;align-items:center;justify-content:center;gap:40px;">
+    <span style="font-size:13px;color:var(--muted);font-family:'Crimson Text',serif;font-style:italic;">1.º ESO</span>
+    <span style="color:var(--amber);font-size:8px;">◆</span>
+    <span style="font-size:13px;color:var(--muted);font-family:'Crimson Text',serif;font-style:italic;">5 Salas</span>
+    <span style="color:var(--amber);font-size:8px;">◆</span>
+    <span style="font-size:13px;color:var(--muted);font-family:'Crimson Text',serif;font-style:italic;">15 Ecuaciones</span>
+    <span style="color:var(--amber);font-size:8px;">◆</span>
+    <span style="font-size:13px;color:var(--muted);font-family:'Crimson Text',serif;font-style:italic;">¿Lograrás escapar?</span>
+  </div>
+
+  <div id="click-hint">— Haz clic o pulsa → para comenzar —</div>`;
+}
+
+function renderNarrative() {
+  return `
+  <div class="stone-bg"></div>
+  ${greekBorder()}
+  ${torches(100, null)}
+
+  <div style="position:absolute;top:38px;left:0;right:0;text-align:center;font-size:22px;font-weight:700;color:var(--gold);letter-spacing:5px;">
+    EL ORÁCULO HABLA
+  </div>
+
+  <!-- Eye symbol -->
+  <div style="position:absolute;top:110px;left:0;right:0;display:flex;justify-content:center;">
+    <div style="width:80px;height:48px;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(212,133,26,.15);">
+      <div style="width:36px;height:36px;background:var(--amber);border-radius:50%;"></div>
+    </div>
+  </div>
+
+  <!-- Text panel -->
+  <div class="panel" style="position:absolute;top:180px;left:80px;right:80px;padding:40px 54px;line-height:0;">
+    <div style="font-family:'Crimson Text',serif;font-size:21px;color:var(--cream);line-height:1.7;font-style:italic;text-align:center;">
+      <p>Viajeros intrépidos...</p><br>
+      <p>Os habéis adentrado demasiado en el Laberinto del Minotauro.<br>
+      La salida está sellada con cinco puertas de piedra antigua.</p><br>
+      <p>Cada puerta guarda una inscripción en el lenguaje de los dioses: <strong style="color:var(--gold);font-style:normal;">las ECUACIONES</strong>.</p><br>
+      <p>Solo quien descifre las 15 inscripciones podrá abrir las puertas y<br>escapar... antes de que el Minotauro os encuentre.</p>
+    </div>
+  </div>
+
+  <!-- Warning -->
+  <div class="danger-bar" style="position:absolute;bottom:60px;left:100px;right:100px;height:44px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#FFAAAA;letter-spacing:1px;">
+    ⚠&ensp; El Minotauro acepta SOLO una respuesta correcta por inscripción &ensp;⚠
+  </div>
+
+  <div id="click-hint">— Haz clic para continuar —</div>`;
+}
+
+function renderInstructions() {
+  const steps = [
+    ['🔒','5 SALAS','Cada sala tiene 3 ecuaciones. Debes resolverlas TODAS para abrir la puerta.'],
+    ['📈','DIFICULTAD','Las salas aumentan en dificultad: Iniciado → Aprendiz → Guerrero → Héroe → Maestro.'],
+    ['⚖️','MÉTODO','Lo que hagas a un lado de la ecuación, hazlo también al otro lado.'],
+    ['✅','SOLUCIÓN','La respuesta aparece en el slide siguiente. Intenta resolverla ANTES de pasar.'],
+  ];
+  return `
+  <div class="stone-bg"></div>
+  ${greekBorder()}
+  ${torches(100, null)}
+
+  <div style="position:absolute;top:38px;left:0;right:0;text-align:center;font-size:20px;font-weight:700;color:var(--gold);letter-spacing:5px;">
+    CÓMO FUNCIONA EL LABERINTO
+  </div>
+
+  ${steps.map(([ icon, title, desc], i) => `
+  <div class="panel-muted" style="position:absolute;top:${118 + i*128}px;left:80px;right:80px;height:112px;display:flex;align-items:center;gap:24px;padding:0 24px;">
+    <div style="width:60px;height:60px;border-radius:50%;background:rgba(212,133,26,.25);border:1px solid rgba(212,133,26,.5);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">${icon}</div>
+    <div>
+      <div style="font-size:14px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:6px;">${title}</div>
+      <div style="font-family:'Crimson Text',serif;font-size:18px;color:var(--cream);">${desc}</div>
+    </div>
+  </div>`).join('')}
+
+  <div id="click-hint">— Haz clic para entrar al laberinto —</div>`;
+}
+
+function renderSep(sl) {
+  const c = ROOM_COLORS[sl.room];
+  return `
+  <div class="stone-bg"></div>
+  <div style="position:absolute;inset:0;background:rgba(10,8,4,.35);"></div>
+  <!-- Side bars -->
+  <div style="position:absolute;top:0;left:0;width:14px;height:100%;background:${c};"></div>
+  <div style="position:absolute;top:0;right:0;width:14px;height:100%;background:${c};"></div>
+
+  ${tracker(sl.room, sl.done)}
+
+  <!-- Room badge -->
+  <div style="position:absolute;top:10px;left:22px;background:${c};padding:6px 18px;font-size:13px;font-weight:700;color:var(--stone);letter-spacing:1px;">
+    SALA ${sl.room}
+  </div>
+
+  <!-- Title -->
+  <div style="position:absolute;top:100px;left:0;right:0;text-align:center;font-size:88px;font-weight:900;color:var(--gold);letter-spacing:6px;text-shadow:0 6px 30px rgba(0,0,0,.9);">${sl.title}</div>
+
+  <!-- Divider -->
+  <div style="position:absolute;top:268px;left:140px;right:140px;height:2px;background:${c};"></div>
+
+  <div style="position:absolute;top:282px;left:0;right:0;text-align:center;font-family:'Crimson Text',serif;font-size:28px;font-style:italic;color:var(--cream);">${sl.subtitle}</div>
+  <div style="position:absolute;top:330px;left:0;right:0;text-align:center;font-size:16px;font-weight:700;color:${c};letter-spacing:3px;">${sl.tipo}</div>
+
+  <!-- Lema -->
+  <div style="position:absolute;top:400px;left:180px;right:180px;border:1px solid ${c}55;background:rgba(10,8,4,.5);padding:22px 32px;text-align:center;">
+    <div style="font-family:'Crimson Text',serif;font-size:18px;color:var(--amber);font-style:italic;">"${sl.lema}"</div>
+  </div>
+
+  <div id="click-hint">— Haz clic para empezar la sala —</div>`;
+}
+
+function renderQuestion(sl) {
+  const c = ROOM_COLORS[sl.room];
+  const isLast = sl.eq === sl.total;
+  return `
+  <div class="stone-bg"></div>
+  ${greekBorder()}
+  ${torches(88, null)}
+  ${tracker(sl.room, sl.done)}
+  ${salaBand(sl.room)}
+
+  <!-- Badges row -->
+  <div style="position:absolute;top:128px;left:30px;right:30px;display:flex;justify-content:space-between;align-items:center;">
+    <div class="badge badge-gold">Ecuación ${sl.eq} de ${sl.total}</div>
+    <div class="badge badge-amber" style="border-color:${c};color:var(--cream);background:${c}40;">✏️&ensp;RESUÉLVELA TÚ</div>
+  </div>
+
+  <!-- Equation panel -->
+  <div class="panel" style="position:absolute;top:172px;left:30px;right:30px;height:318px;">
+    <div style="position:absolute;top:18px;left:28px;font-family:'Crimson Text',serif;font-size:14px;color:var(--amber);font-style:italic;">🔒&ensp;DESCIFRA ESTA INSCRIPCIÓN:</div>
+    <div class="eq-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:72px;padding-top:18px;">${sl.equation}</div>
+  </div>
+
+  <!-- Hint / work space -->
+  ${sl.hint
+    ? `<div class="hint-bar" style="position:absolute;top:506px;left:30px;right:30px;height:50px;display:flex;align-items:center;padding:0 22px;gap:10px;">
+        <span style="font-size:18px;">💡</span>
+        <span style="font-family:'Crimson Text',serif;font-size:16px;color:#A8D8A8;font-style:italic;">Pista: ${sl.hint}</span>
+       </div>`
+    : `<div class="panel-muted" style="position:absolute;top:506px;left:30px;right:30px;height:50px;display:flex;align-items:center;padding:0 22px;">
+        <span style="font-family:'Crimson Text',serif;font-size:15px;color:var(--muted);font-style:italic;">📝&ensp;¿Cuál es el valor de x?</span>
+       </div>`
+  }
+
+  <div id="click-hint">— Haz clic para ver la solución —</div>`;
+}
+
+function renderSolution(sl) {
+  const isLast = sl.eq === sl.total;
+  return `
+  <div class="stone-bg"></div>
+  ${greekBorder()}
+  ${torches(88, null)}
+  ${tracker(sl.room, sl.done)}
+  ${salaBand(sl.room)}
+
+  <!-- Badges row -->
+  <div style="position:absolute;top:128px;left:30px;right:30px;display:flex;justify-content:space-between;align-items:center;">
+    <div class="badge badge-gold">Ecuación ${sl.eq} de ${sl.total}</div>
+    <div class="badge badge-green">✅&ensp;SOLUCIÓN</div>
+  </div>
+
+  <!-- Equation reference -->
+  <div class="panel-muted" style="position:absolute;top:172px;left:30px;right:30px;height:90px;display:flex;align-items:center;">
+    <div style="font-family:'Crimson Text',serif;font-size:12px;color:var(--muted);font-style:italic;position:absolute;top:10px;left:20px;">La inscripción era:</div>
+    <div style="width:100%;text-align:center;font-family:'Crimson Text',serif;font-size:38px;font-weight:600;color:var(--cream);opacity:.8;padding-top:14px;">${sl.equation}</div>
+  </div>
+
+  <!-- Solution panel -->
+  <div class="panel-green" style="position:absolute;top:276px;left:30px;right:30px;height:322px;">
+    <div style="position:absolute;top:18px;left:28px;font-family:'Crimson Text',serif;font-size:14px;color:var(--green);font-style:italic;">🔓&ensp;INSCRIPCIÓN DESCIFRADA:</div>
+    <div class="sol-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-top:18px;">${sl.solution}</div>
+  </div>
+
+  <div id="click-hint" style="color:${isLast ? 'var(--green)' : 'var(--muted)'};">
+    — ${isLast ? '¡Sala completada! Avanza a la siguiente puerta →' : `Continúa con la ecuación ${sl.eq + 1} →`} —
+  </div>`;
+}
+
+function renderDoor(sl) {
+  const c = ROOM_COLORS[sl.next];
+  return `
+  <div class="stone-bg"></div>
+  <div class="frame-green"></div>
+  ${torches(100, 490)}
+  ${tracker(sl.next, sl.done)}
+
+  <div style="position:absolute;top:100px;left:0;right:0;text-align:center;font-size:80px;" class="key-icon">🗝️</div>
+
+  <div style="position:absolute;top:220px;left:0;right:0;text-align:center;font-size:56px;font-weight:900;color:var(--green);letter-spacing:3px;text-shadow:0 4px 20px rgba(0,0,0,.8);">¡PUERTA ABIERTA!</div>
+
+  <div style="position:absolute;top:300px;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);"></div>
+
+  <div style="position:absolute;top:318px;left:0;right:0;text-align:center;font-family:'Crimson Text',serif;font-size:22px;font-style:italic;color:var(--cream);">
+    Sala ${sl.cleared} completada. ¡Excelente trabajo!
+  </div>
+
+  <!-- Next room preview -->
+  <div style="position:absolute;top:384px;left:200px;right:200px;height:60px;background:${c}30;border:1.5px solid ${c};border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--cream);letter-spacing:2px;">
+    ➤&ensp;Avanzáis hacia la Sala ${sl.next}: ${ROOM_NAMES[sl.next]}…
+  </div>
+
+  <div id="click-hint" style="color:var(--green);">— Haz clic para entrar en la siguiente sala —</div>`;
+}
+
+function renderVictory() {
+  return `
+  <div class="stone-bg"></div>
+  <div class="frame-green"></div>
+  ${torches(100, 490)}
+  ${tracker(0, [1,2,3,4,5])}
+
+  <div style="position:absolute;top:90px;left:0;right:0;text-align:center;font-size:64px;">🏛️</div>
+
+  <div style="position:absolute;top:180px;left:0;right:0;text-align:center;font-size:62px;font-weight:900;color:var(--green);letter-spacing:3px;text-shadow:0 4px 20px rgba(0,0,0,.9);">¡¡ HABÉIS ESCAPADO !!</div>
+
+  <div style="position:absolute;top:268px;left:140px;right:140px;height:1px;background:var(--green);opacity:.6;"></div>
+
+  <div style="position:absolute;top:284px;left:100px;right:100px;text-align:center;font-family:'Crimson Text',serif;font-size:20px;font-style:italic;color:var(--cream);line-height:1.6;">
+    Habéis descifrado las 15 inscripciones del laberinto<br>
+    y el Minotauro ha huido derrotado por vuestra sabiduría algebraica.
+  </div>
+
+  <!-- Stars -->
+  <div style="position:absolute;top:390px;left:0;right:0;text-align:center;font-size:52px;filter:drop-shadow(0 0 12px var(--gold));">★ ★ ★ ★ ★</div>
+
+  <!-- Score -->
+  <div class="panel-green" style="position:absolute;top:476px;left:220px;right:220px;height:56px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--green);letter-spacing:2px;">
+    15 / 15 INSCRIPCIONES DESCIFRADAS &ensp;·&ensp; LABERINTO CONQUISTADO
+  </div>
+
+  <!-- Restart -->
+  <div style="position:absolute;bottom:30px;left:0;right:0;text-align:center;font-family:'Crimson Text',serif;font-size:16px;color:var(--muted);font-style:italic;">
+    Pulsa R para volver a empezar
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+const stage = document.getElementById('stage');
+let current = 0;
+let slideEls = [];
+
+function buildAllSlides() {
+  stage.innerHTML = '';
+  slideEls = [];
+  SLIDES.forEach((sl, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide';
+    el.setAttribute('data-index', i);
+    el.innerHTML = getHTML(sl);
+    stage.appendChild(el);
+    slideEls.push(el);
+  });
+}
+
+function getHTML(sl) {
+  switch(sl.type) {
+    case 'cover':        return renderCover();
+    case 'narrative':    return renderNarrative();
+    case 'instructions': return renderInstructions();
+    case 'sep':          return renderSep(sl);
+    case 'q':            return renderQuestion(sl);
+    case 's':            return renderSolution(sl);
+    case 'door':         return renderDoor(sl);
+    case 'victory':      return renderVictory();
+    default:             return '';
+  }
+}
+
+function goTo(idx) {
+  if (idx < 0 || idx >= SLIDES.length) return;
+  slideEls[current].classList.remove('active');
+  current = idx;
+  slideEls[current].classList.add('active');
+  updateUI();
+}
+
+function next() { goTo(current + 1); }
+function prev() { goTo(current - 1); }
+
+function updateUI() {
+  const total = SLIDES.length;
+  document.getElementById('slide-counter').textContent = `${current + 1} / ${total}`;
+  const pct = ((current + 1) / total) * 100;
+  document.getElementById('progress-line').style.width = pct + '%';
+}
+
+// Scale stage to fill viewport
+function scaleStage() {
+  const scaleX = window.innerWidth  / 1280;
+  const scaleY = window.innerHeight / 720;
+  const scale  = Math.min(scaleX, scaleY);
+  const ox = (window.innerWidth  - 1280 * scale) / 2;
+  const oy = (window.innerHeight - 720  * scale) / 2;
+  stage.style.transform = `translate(${ox}px,${oy}px) scale(${scale})`;
+}
+
+// Fullscreen
+document.getElementById('btn-fs').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});
+
+// Navigation
+document.getElementById('btnPrev').addEventListener('click', e => { e.stopPropagation(); prev(); });
+document.getElementById('btnNext').addEventListener('click', e => { e.stopPropagation(); next(); });
+document.addEventListener('click', () => next());
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ')  { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft')                     { e.preventDefault(); prev(); }
+  if (e.key === 'r' || e.key === 'R')            { goTo(0); }
+  if (e.key === 'f' || e.key === 'F')            {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+});
+
+window.addEventListener('resize', scaleStage);
+
+// ── INIT ──────────────────────────────────────────────────────
+buildAllSlides();
+scaleStage();
+goTo(0);
+
+// Try to play audio (will silently fail if no source)
+const audio = document.getElementById('bgMusic');
+if (audio.src) audio.play().catch(() => {});
+</script>
+</body>
+</html>
