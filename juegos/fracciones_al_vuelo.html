@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Fracciones al vuelo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Lexend:wght@400;500;600&display=swap">
+<style>
+/* Layout: una tarjeta central de juego; marcador arriba, pregunta grande, entrada de fracción con barra, explicación con tira dibujada */
+:root{
+  --bg:#F3F6FB; --surface:#FFFFFF; --ink:#1D2433; --muted:#5B6578; --line:#D6DDEA;
+  --accent:#2F6FEB; --accent-ink:#FFFFFF; --red:#E4573D; --blue:#2F6FEB; --ok:#1E9E5A; --ok-bg:#E3F5EB; --bad:#C2412D; --bad-bg:#FCE9E5;
+  --gold:#C98A00; --empty:#EEF2F8;
+  --display:"Fredoka", "Trebuchet MS", system-ui, sans-serif; --body:"Lexend", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121722; --surface:#1B2231; --ink:#E8EDF6; --muted:#9AA6BC; --line:#2E384C;
+  --accent:#6E9BFF; --accent-ink:#0E1420; --red:#FF7A5E; --blue:#6E9BFF; --ok:#4CD08B; --ok-bg:#163526; --bad:#FF8A73; --bad-bg:#3A1F1A;
+  --gold:#F0B83A; --empty:#252E40; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121722; --surface:#1B2231; --ink:#E8EDF6; --muted:#9AA6BC; --line:#2E384C;
+  --accent:#6E9BFF; --accent-ink:#0E1420; --red:#FF7A5E; --blue:#6E9BFF; --ok:#4CD08B; --ok-bg:#163526; --bad:#FF8A73; --bad-bg:#3A1F1A;
+  --gold:#F0B83A; --empty:#252E40; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1,h2{font-family:var(--display);font-weight:700;letter-spacing:.2px;text-wrap:balance;margin:0}
+h1{font-size:2.1rem;line-height:1.1}
+h2{font-size:1.4rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px}
+.muted{color:var(--muted)}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;flex:none}
+label{font-weight:600;font-size:.95rem}
+input[type=text],input[type=number]{font:inherit;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.lvl{font:inherit;text-align:left;cursor:pointer;background:var(--bg);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.lvl strong{font-family:var(--display);font-size:1.1rem}
+.lvl span{font-size:.85rem;color:var(--muted)}
+.lvl[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.btn{font:inherit;font-family:var(--display);font-weight:600;font-size:1.1rem;cursor:pointer;border:none;border-radius:12px;padding:12px 22px;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.score{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.95rem}
+.dots{display:flex;gap:5px;flex-wrap:wrap}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--empty);border:1px solid var(--line)}
+.dot.ok{background:var(--ok);border-color:var(--ok)} .dot.bad{background:var(--bad);border-color:var(--bad)} .dot.now{border:2px solid var(--accent)}
+.tag{font-size:.8rem;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.q{font-family:var(--display);font-size:1.55rem;font-weight:600;line-height:1.3;margin:6px 0 14px}
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 .15em;line-height:1.05;font-variant-numeric:tabular-nums}
+.frac .n{border-bottom:2.5px solid currentColor;padding:0 .2em}
+.frac .d{padding:0 .2em}
+.answer{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fin{display:flex;flex-direction:column;align-items:center;gap:6px;width:92px}
+.fin input{text-align:center;font-family:var(--display);font-size:1.5rem;padding:6px}
+.fin .bar{width:100%;height:4px;background:var(--ink);border-radius:2px}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.choice{font:inherit;font-family:var(--display);font-size:1.4rem;cursor:pointer;background:var(--bg);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:14px}
+.fb{border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.fb.ok{background:var(--ok-bg)} .fb.bad{background:var(--bad-bg)}
+.fb h3{margin:0;font-family:var(--display);font-size:1.2rem}
+.fb.ok h3{color:var(--ok)} .fb.bad h3{color:var(--bad)}
+.steps{margin:0;padding-left:1.2em}
+.steps li{margin:2px 0}
+svg.strip{width:100%;max-width:560px;height:auto;display:block}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:12px;padding:12px}
+.stat b{display:block;font-family:var(--display);font-size:1.6rem;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
+.tablewrap{overflow-x:auto}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:10px;word-break:break-all;font-size:.9rem}
+@media (prefers-reduced-motion:no-preference){.pop{animation:pop .25s ease-out}@keyframes pop{from{transform:scale(.97);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+
+</head><body>
+<div class="wrap">
+  <header class="brand">
+    <svg class="logo" viewBox="0 0 46 46" aria-hidden="true"><rect x="3" y="8" width="40" height="30" rx="6" fill="var(--empty)" stroke="var(--ink)" stroke-width="2"/><rect x="3" y="8" width="13.3" height="30" rx="6" fill="var(--red)"/><rect x="16.3" y="8" width="10" height="30" fill="var(--blue)"/><line x1="16.3" y1="8" x2="16.3" y2="38" stroke="var(--ink)" stroke-width="2"/><line x1="26.3" y1="8" x2="26.3" y2="38" stroke="var(--ink)" stroke-width="2"/></svg>
+    <div><h1>Fracciones al vuelo</h1><div class="muted">Cálculo mental · Ruta 1 · Mercadillo solidario</div></div>
+  </header>
+
+  <!-- INICIO -->
+  <section id="start" class="card" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label for="name">Tu nombre</label>
+      <input id="name" type="text" maxlength="40" autocomplete="off" placeholder="Nombre y apellido">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label for="grupo">Tu grupo</label>
+      <input id="grupo" type="text" maxlength="10" autocomplete="off" placeholder="Por ejemplo, 1º A">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <label>Elige tu nivel</label>
+      <div class="levels" id="levels">
+        <button class="lvl" data-l="1" aria-pressed="false"><strong>🩹 Nivel 1</strong><span>Equivalentes, simplificar y fracción de una cantidad</span></button>
+        <button class="lvl" data-l="2" aria-pressed="true"><strong>⚔️ Nivel 2</strong><span>Comparar, sumar y restar</span></button>
+        <button class="lvl" data-l="3" aria-pressed="false"><strong>🧙 Nivel 3</strong><span>Multiplicar, recetas y «¿cuántas veces cabe?»</span></button>
+        <button class="lvl" data-l="0" aria-pressed="false"><strong>🎲 Mezcla</strong><span>Un poco de todo</span></button>
+      </div>
+    </div>
+    <p class="muted" style="margin:0">10 preguntas. Escribe la fracción con el numerador arriba y el denominador abajo. Si fallas, verás por qué con un dibujo: léelo antes de seguir.</p>
+    <div class="row"><button class="btn" id="go">Empezar</button><span id="startMsg" class="muted"></span></div>
+  </section>
+
+  <!-- JUEGO -->
+  <section id="game" class="card" hidden>
+    <div class="score"><span class="tag" id="qtag"></span><div class="dots" id="dots"></div><span><b id="pts">0</b> puntos · racha <b id="streak">0</b></span></div>
+    <div class="q" id="qtext"></div>
+    <form id="form" class="answer" autocomplete="off"></form>
+    <div id="fb" style="margin-top:14px"></div>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section id="results" class="card" hidden style="display:flex;flex-direction:column;gap:14px"></section>
+</div>
+
+<script>
+// ===== CONFIGURACIÓN DEL PROFESOR =====
+// Pega aquí, entre las comillas, la URL de la aplicación web de Google Apps Script (termina en /exec).
+// Si se deja vacía, el juego funciona igual pero no envía resultados.
+const SHEET_URL = '';
+// =====================================
+
+// ---------- utilidades ----------
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a};
+const lcm=(a,b)=>a/gcd(a,b)*b;
+const simp=(n,d)=>{const g=gcd(n,d);return [n/g,d/g]};
+const same=(a,b,c,d)=>a*d===b*c;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const F=(n,d)=>`<span class="frac"><span class="n">${n}</span><span class="d">${d}</span></span>`;
+const fs=(n,d)=>d===1?`${n}`:`${n}/${d}`;
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function irr(dens){const d=pick(dens);let n;do{n=R(1,d-1)}while(gcd(n,d)!==1);return [n,d]}
+
+// tira dibujada: L cuadritos; segs = [{c: cuántos, col: color}], opcional "cross" (cuántos al final tachar)
+function strip(L,segs,label){
+  const W=540,pad=4,h=40,cw=(W-2*pad)/L,rows=Math.ceil(Math.max(L,segs.reduce((s,x)=>s+x.c,0))/L);
+  let out='',k=0;const total=segs.reduce((s,x)=>s+x.c,0);
+  for(let r=0;r<rows;r++){for(let i=0;i<L;i++){let fill='var(--empty)';let acc=0;for(const s of segs){if(k<acc+s.c){fill=s.col;break}acc+=s.c}
+    const x=pad+i*cw,y=pad+r*(h+10);out+=`<rect x="${x}" y="${y}" width="${cw}" height="${h}" fill="${fill}" stroke="var(--ink)" stroke-width="1.5"/>`;
+    k++;if(k>=L*rows)break}}
+  const H=pad*2+rows*h+(rows-1)*10+(label?22:0);
+  if(label)out+=`<text x="${pad}" y="${H-4}" font-size="14" fill="var(--muted)" font-family="Lexend,sans-serif">${esc(label)}</text>`;
+  return `<svg class="strip" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label||'tira de fracciones')}">${out}</svg>`;
+}
+
+// ---------- generadores de preguntas ----------
+// cada pregunta: {tipo, html, kind:'frac'|'num'|'choice', choices?, check(ans)->bool|'simp', sol:texto, expl:html}
+const G={
+  eq(){const [a,b]=pick([[1,2],[2,3],[3,4],[2,5],[3,5],[5,6],[3,8],[4,5],[1,3],[3,10]]);const k=pick([2,3,4,5]);
+    return{tipo:'Equivalentes',kind:'num',html:`${F(a,b)} = ${F('?',b*k)}`,
+      check:v=>v===a*k,sol:`${a*k}`,
+      expl:`<ol class="steps"><li>El denominador pasa de ${b} a ${b*k}: se ha <b>multiplicado por ${k}</b>.</li><li>Para que valga lo mismo, el numerador también: ${a} × ${k} = <b>${a*k}</b>.</li><li>Cada trozo se parte en ${k}: hay ${k} veces más trozos, y cada uno es ${k} veces más pequeño.</li></ol>`+strip(b*k,[{c:a*k,col:'var(--red)'}],`${fs(a,b)} = ${fs(a*k,b*k)}: ${a*k} cuadritos de ${b*k}`)}},
+  simp(){const [a,b]=pick([[1,2],[2,3],[3,4],[2,5],[3,5],[5,6],[3,8],[4,5],[5,8],[7,10],[1,3],[1,4]]);const k=pick([2,3,4,5,6]);
+    return{tipo:'Simplificar',kind:'frac',html:`Simplifica hasta la fracción <b>irreducible</b>: ${F(a*k,b*k)}`,
+      check:(n,d)=>n===a&&d===b?true:((n===a*k&&d===b*k)?false:(d>0&&same(n,d,a,b)?'casi':false)),sol:fs(a,b),
+      expl:`<ol class="steps"><li>Busca el mcd de ${a*k} y ${b*k}: es <b>${k}</b>.</li><li>Divide arriba y abajo entre ${k}: ${a*k} : ${k} = ${a}, ${b*k} : ${k} = ${b}.</li><li>${fs(a,b)} ya no se puede simplificar más: es irreducible.</li></ol>`}},
+  cant(){const [a,b]=pick([[1,2],[2,3],[3,4],[2,5],[3,5],[5,6],[3,8],[4,5],[1,3],[1,4],[3,10]]);const m=R(2,8);const N=b*m;
+    return{tipo:'Fracción de una cantidad',kind:'num',html:`¿Cuánto es ${F(a,b)} de <b>${N}</b>?`,check:v=>v===a*m,sol:`${a*m}`,
+      expl:`<ol class="steps"><li>El denominador dice en cuántas partes iguales reparto: ${N} : ${b} = <b>${m}</b> en cada parte.</li><li>El numerador dice cuántas partes cojo: ${m} × ${a} = <b>${a*m}</b>.</li></ol>`}},
+  sum(){const dens=pick([[2,4],[2,3],[3,4],[2,5],[3,6],[4,6],[2,8],[4,8],[3,5],[5,10],[4,12],[2,6],[3,12],[6,12]]);
+    let [a,b]=irr([dens[0]]),[c,d]=irr([dens[1]]);const L=lcm(b,d);const A=a*L/b,C=c*L/d;const [rn,rd]=simp(A+C,L);
+    return{tipo:'Sumar',kind:'frac',html:`${F(a,b)} + ${F(c,d)} = ?`,check:(n,dd)=>dd>0&&same(n,dd,rn,rd)?((n===rn&&dd===rd)?true:'simp'):false,sol:fs(rn,rd),
+      expl:`<ol class="steps"><li>${b===d?'Los trozos ya son iguales.':`Trozos distintos: busco trozos iguales. mcm(${b}, ${d}) = <b>${L}</b>.`}</li><li>${fs(a,b)} = ${fs(A,L)} y ${fs(c,d)} = ${fs(C,L)}.</li><li>Sumo los trozos: ${A} + ${C} = ${A+C}. El tamaño (el ${L}) no cambia: <b>${fs(A+C,L)}</b>${(A+C!==rn)?` = <b>${fs(rn,rd)}</b>`:''}.</li><li>⚠️ Nunca se suman los denominadores: ${fs(a+c,b+d)} sería incorrecto.</li></ol>`+strip(L,[{c:A,col:'var(--red)'},{c:C,col:'var(--blue)'}],`rojo ${fs(a,b)} = ${fs(A,L)} · azul ${fs(c,d)} = ${fs(C,L)}`)}},
+  dif(){let a,b,c,d,L,A,C,dens;do{dens=pick([[2,4],[2,3],[3,4],[2,5],[3,6],[4,6],[2,8],[4,8],[3,5],[5,10],[4,12],[2,6],[3,12],[6,12]]);[a,b]=irr([dens[0]]);[c,d]=irr([dens[1]]);if(a*d<c*b){[a,b,c,d]=[c,d,a,b]}L=lcm(b,d);A=a*L/b;C=c*L/d}while(A===C);
+    const [rn,rd]=simp(A-C,L);
+    return{tipo:'Restar',kind:'frac',html:`${F(a,b)} − ${F(c,d)} = ?`,check:(n,dd)=>dd>0&&same(n,dd,rn,rd)?((n===rn&&dd===rd)?true:'simp'):false,sol:fs(rn,rd),
+      expl:`<ol class="steps"><li>${b===d?'Los trozos ya son iguales.':`Trozos iguales: mcm(${b}, ${d}) = <b>${L}</b>.`}</li><li>${fs(a,b)} = ${fs(A,L)} y ${fs(c,d)} = ${fs(C,L)}.</li><li>Quito trozos: ${A} − ${C} = ${A-C}: <b>${fs(A-C,L)}</b>${(A-C!==rn)?` = <b>${fs(rn,rd)}</b>`:''}.</li></ol>`+strip(L,[{c:A-C,col:'var(--red)'},{c:C,col:'var(--muted)'}],`tengo ${A} de ${L}; quito ${C} (gris); quedan ${A-C}`)}},
+  cmp(){let a,b,c,d;do{[a,b]=irr([3,4,5,6,8,10,12]);[c,d]=irr([3,4,5,6,8,10,12])}while(b===d||a*d===c*b);const L=lcm(b,d);const A=a*L/b,C=c*L/d;const big=A>C?0:1;
+    const ch=[fs(a,b),fs(c,d)];
+    return{tipo:'Comparar',kind:'choice',html:`¿Cuál es <b>mayor</b>?`,choices:ch,check:i=>i===big,sol:ch[big],
+      expl:`<ol class="steps"><li>Paso las dos a trozos iguales: mcm(${b}, ${d}) = ${L}.</li><li>${fs(a,b)} = ${fs(A,L)} y ${fs(c,d)} = ${fs(C,L)}.</li><li>${Math.max(A,C)} trozos es más que ${Math.min(A,C)}: es mayor <b>${ch[big]}</b>.</li></ol>`}},
+  vf(){const dens=pick([[2,3],[3,4],[2,5],[4,6],[3,5],[2,4],[3,6]]);const [a,b]=irr([dens[0]]),[c,d]=irr([dens[1]]);const L=lcm(b,d);const [rn,rd]=simp(a*L/b+c*L/d,L);
+    const truth=Math.random()<.4;const [sn,sd]=truth?[rn,rd]:[a+c,b+d];
+    return{tipo:'¿Verdadero o falso?',kind:'choice',html:`Lucas dice: ${F(a,b)} + ${F(c,d)} = ${F(sn,sd)}`,choices:['Verdadero','Falso'],check:i=>i===(truth?0:1),sol:truth?'Verdadero':'Falso',
+      expl:truth?`<ol class="steps"><li>Trozos iguales: mcm(${b}, ${d}) = ${L}.</li><li>${fs(a*L/b,L)} + ${fs(c*L/d,L)} = ${fs(a*L/b+c*L/d,L)} = <b>${fs(rn,rd)}</b>. Es correcto.</li></ol>`
+        :`<ol class="steps"><li>Lucas ha sumado arriba con arriba y abajo con abajo: eso <b>nunca</b> vale.</li><li>Pista sin calcular: al sumar debe salir más que ${fs(Math.max(a/b,c/d)===a/b?a:c,Math.max(a/b,c/d)===a/b?b:d)}, y ${fs(sn,sd)} es menos.</li><li>Lo correcto: mcm(${b}, ${d}) = ${L} → ${fs(a*L/b,L)} + ${fs(c*L/d,L)} = <b>${fs(rn,rd)}</b>.</li></ol>`}},
+  ofof(){const a=R(1,3),b=pick([2,3,4,5]),c=R(1,4),d=pick([3,4,5,6]);if(a>=b||c>=d||gcd(a,b)!==1||gcd(c,d)!==1)return G.ofof();const [rn,rd]=simp(a*c,b*d);
+    return{tipo:'Fracción de una fracción',kind:'frac',html:`¿Cuánto es ${F(a,b)} de ${F(c,d)}?`,check:(n,dd)=>dd>0&&same(n,dd,rn,rd)?((n===rn&&dd===rd)?true:'simp'):false,sol:fs(rn,rd),
+      expl:`<ol class="steps"><li>«De» significa <b>multiplicar</b>: ${fs(a,b)} × ${fs(c,d)}.</li><li>Arriba por arriba y abajo por abajo (¡en la multiplicación sí!): ${fs(a*c,b*d)}${(a*c!==rn)?` = <b>${fs(rn,rd)}</b>`:''}.</li><li>Piensa en la tableta: cojo ${fs(c,d)} de la tableta y de ese trozo me quedo con ${fs(a,b)}. Sale menos que ${fs(c,d)}.</li></ol>`}},
+  fits(){const b=pick([2,3,4]);const k=pick([2,3,4]);const d=b*k;const a=R(1,b-1)||1;const tot=a*k;const cands=[1,2,3].filter(c=>tot%c===0&&gcd(c,d)===1&&c<d);const c=pick(cands);const ans=tot/c;
+    return{tipo:'¿Cuántas veces cabe?',kind:'num',html:`¿Cuántas veces cabe ${F(c,d)} en ${F(a,b)}?`,check:v=>v===ans,sol:`${ans}`,
+      expl:`<ol class="steps"><li>Paso a trozos iguales: ${fs(a,b)} = ${fs(tot,d)}.</li><li>¿Cuántos grupos de ${c} trozos caben en ${tot} trozos? ${tot} : ${c} = <b>${ans}</b>.</li><li>Fíjate: dividir entre una fracción menor que 1 da <b>más</b>.</li></ol>`+strip(d,Array.from({length:ans},(_, i)=>({c:c,col:i%2?'var(--blue)':'var(--red)'})),`${ans} grupos de ${fs(c,d)} dentro de ${fs(a,b)}`)}},
+  rec(){const [P,Q,fn,fd]=pick([[4,6,3,2],[2,3,3,2],[8,12,3,2],[4,2,1,2],[6,3,1,2],[3,6,2,1],[8,6,3,4],[4,3,3,4]]);const [a,b]=pick([[3,4],[1,2],[2,3],[3,8],[1,4],[5,8],[1,3]]);const [rn,rd]=simp(a*fn,b*fd);const ing=pick(['kg de harina','kg de azúcar','l de leche']);
+    return{tipo:'Escalar una receta',kind:'frac',html:`Una receta para <b>${P}</b> personas lleva ${F(a,b)} ${ing}. ¿Cuánto hace falta para <b>${Q}</b> personas?`,check:(n,dd)=>dd>0&&same(n,dd,rn,rd)?((n===rn&&dd===rd)?true:'simp'):false,sol:fs(rn,rd),
+      expl:`<ol class="steps"><li>De ${P} a ${Q} personas multiplico por ${fs(Q,P)}${fd!==1?` = ${fs(fn,fd)}`:''}${(fn===3&&fd===2)?' (la receta y la mitad de la receta)':''}${(fn===1&&fd===2)?' (la mitad)':''}${(fn===3&&fd===4)?' (tres cuartas partes)':''}.</li><li>${fs(a,b)} × ${fs(fn,fd)} = ${fs(a*fn,b*fd)}${(a*fn!==rn||b*fd!==rd)?` = <b>${fs(rn,rd)}</b>`:''}.</li><li>Comprueba: ${Q>P?'son más personas: tiene que salir más':'son menos personas: tiene que salir menos'}.</li></ol>`}},
+};
+const POOL={1:['eq','simp','cant'],2:['sum','dif','cmp','vf'],3:['ofof','fits','rec'],0:['eq','simp','cant','sum','dif','cmp','vf','ofof','fits','rec']};
+const LNAME={1:'🩹 Nivel 1',2:'⚔️ Nivel 2',3:'🧙 Nivel 3',0:'🎲 Mezcla'};
+
+// ---------- estado ----------
+let level=2,qs=[],i=0,pts=0,streak=0,log=[],answered=false,name='',grupo='',gameId='';
+const plain=el=>{const c=el.cloneNode(true);c.querySelectorAll('.frac').forEach(f=>f.replaceWith(f.querySelector('.n').textContent+'/'+f.querySelector('.d').textContent));return c.textContent.replace(/\s+/g,' ').trim()};
+const $=id=>document.getElementById(id);
+
+document.querySelectorAll('.lvl').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.lvl').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');level=+b.dataset.l}));
+try{const n=localStorage.getItem('fav_name');if(n)$('name').value=n;const g=localStorage.getItem('fav_grupo');if(g)$('grupo').value=g}catch(e){}
+
+$('go').addEventListener('click',start);
+function start(){
+  name=$('name').value.trim();
+  grupo=$('grupo').value.trim();
+  if(!name){$('startMsg').textContent='Escribe tu nombre para empezar.';$('name').focus();return}
+  if(SHEET_URL&&!grupo){$('startMsg').textContent='Escribe tu grupo para empezar.';$('grupo').focus();return}
+  try{localStorage.setItem('fav_name',name);localStorage.setItem('fav_grupo',grupo)}catch(e){}
+  gameId=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const pool=POOL[level];const order=[];while(order.length<10)order.push(...shuffle([...pool]));
+  qs=order.slice(0,10).map(t=>G[t]());i=0;pts=0;streak=0;log=[];
+  $('start').hidden=true;$('results').hidden=true;$('game').hidden=false;show();
+}
+function dots(){$('dots').innerHTML=qs.map((_,k)=>`<span class="dot ${k<log.length?(log[k].ok?'ok':'bad'):''} ${k===i&&!answered?'now':''}"></span>`).join('')}
+function show(){
+  answered=false;const q=qs[i];
+  $('qtag').textContent=`${i+1}/10 · ${q.tipo}`;$('pts').textContent=pts;$('streak').textContent=streak;dots();
+  $('qtext').innerHTML=q.html;$('fb').innerHTML='';
+  const f=$('form');
+  if(q.kind==='frac'){f.innerHTML=`<div class="fin"><input id="an" type="number" inputmode="numeric" aria-label="numerador"><div class="bar"></div><input id="ad" type="number" inputmode="numeric" aria-label="denominador"></div><button class="btn" type="submit">Comprobar</button>`;setTimeout(()=>$('an').focus(),30)}
+  else if(q.kind==='num'){f.innerHTML=`<div class="fin" style="width:120px"><input id="av" type="number" inputmode="numeric" aria-label="respuesta"></div><button class="btn" type="submit">Comprobar</button>`;setTimeout(()=>$('av').focus(),30)}
+  else{f.innerHTML=`<div class="choices" style="flex:1">${q.choices.map((c,k)=>`<button type="button" class="choice" data-k="${k}">${c.includes('/')?F(...c.split('/')):esc(c)}</button>`).join('')}</div>`;
+    f.querySelectorAll('.choice').forEach(b=>b.addEventListener('click',()=>grade(+b.dataset.k,q.choices[+b.dataset.k])))}
+  $('game').classList.remove('pop');void $('game').offsetWidth;$('game').classList.add('pop');
+}
+$('form').addEventListener('submit',e=>{e.preventDefault();if(answered)return;const q=qs[i];
+  if(q.kind==='frac'){const n=parseInt($('an').value,10),d=parseInt($('ad').value,10);if(isNaN(n)||isNaN(d)||d===0){$('fb').innerHTML='<p class="muted">Escribe el numerador y el denominador (que no sea 0).</p>';return}grade([n,d],`${n}/${d}`)}
+  else{const v=parseInt($('av').value,10);if(isNaN(v)){$('fb').innerHTML='<p class="muted">Escribe un número.</p>';return}grade(v,`${v}`)}
+});
+function grade(ans,shown){
+  if(answered)return;answered=true;const q=qs[i];
+  const r=Array.isArray(ans)?q.check(ans[0],ans[1]):q.check(ans);
+  const ok=r===true, half=(r==='simp'||r==='casi');
+  if(ok){streak++;pts+=10+Math.min(streak-1,5)*2}else if(half){pts+=5;streak=0}else streak=0;
+  log.push({tipo:q.tipo,pregunta:plain($('qtext')),resp:shown,sol:q.sol,ok:ok,half:half});
+  $('pts').textContent=pts;$('streak').textContent=streak;dots();
+  const next=`<div class="row"><button class="btn" id="next">${i<9?'Siguiente':'Ver resultados'}</button></div>`;
+  if(ok)$('fb').innerHTML=`<div class="fb ok"><h3>¡Correcto! ${streak>2?'🔥 racha de '+streak:''}</h3><details><summary class="muted">Ver por qué</summary>${q.expl}</details>${next}</div>`;
+  else if(half)$('fb').innerHTML=`<div class="fb bad" style="background:var(--empty)"><h3 style="color:var(--gold)">Vale lo mismo, pero ${r==='casi'?'no es irreducible':'se puede simplificar'}</h3><p style="margin:0">La respuesta más simple es <b>${esc(q.sol)}</b>.</p>${q.expl}${next}</div>`;
+  else $('fb').innerHTML=`<div class="fb bad"><h3>No es correcto: la respuesta es ${esc(q.sol)}</h3><p style="margin:0">Tú has puesto <b>${esc(shown)}</b>. Mira por qué:</p>${q.expl}${next}</div>`;
+  $('next').addEventListener('click',()=>{i++;if(i<10)show();else finish()});
+  setTimeout(()=>{const b=$('next');if(b&&ok)b.focus()},30);
+}
+function finish(){
+  $('game').hidden=true;const res=$('results');res.hidden=false;
+  const okN=log.filter(x=>x.ok).length,halfN=log.filter(x=>x.half).length;
+  const byT={};log.forEach(x=>{byT[x.tipo]=byT[x.tipo]||[0,0];byT[x.tipo][1]++;if(x.ok)byT[x.tipo][0]++});
+  const msg=okN>=8?'¡Lo tienes! Prueba el siguiente nivel.':okN>=5?'Vas bien. Repasa las explicaciones de los fallos y juega otra vez.':'Juega otra vez este nivel y lee despacio cada explicación.';
+  const porTipo=Object.entries(byT).map(([t,[a,b]])=>`${t} ${a}/${b}`).join(' · ');
+  const code=`${name} | ${LNAME[level]} | ${okN}/10 | ${pts} puntos | `+Object.entries(byT).map(([t,[a,b]])=>`${t} ${a}/${b}`).join(' · ');
+  res.innerHTML=`<h2>${esc(name)}, tu resultado</h2>
+  <div class="res-grid"><div class="stat"><span class="muted">Aciertos</span><b>${okN}/10</b></div><div class="stat"><span class="muted">Casi (sin simplificar)</span><b>${halfN}</b></div><div class="stat"><span class="muted">Puntos</span><b>${pts}</b></div><div class="stat"><span class="muted">Nivel</span><b style="font-size:1.1rem">${LNAME[level]}</b></div></div>
+  <p style="margin:0"><b>${msg}</b></p>
+  <div class="tablewrap"><table><thead><tr><th>Tipo</th><th>Aciertos</th></tr></thead><tbody>${Object.entries(byT).map(([t,[a,b]])=>`<tr><td>${esc(t)}</td><td>${a}/${b}</td></tr>`).join('')}</tbody></table></div>
+  <details><summary>Ver todas mis respuestas</summary><div class="tablewrap"><table><thead><tr><th>#</th><th>Pregunta</th><th>Tu respuesta</th><th>Solución</th></tr></thead><tbody>${log.map((x,k)=>`<tr><td>${k+1}</td><td>${esc(x.pregunta)}</td><td>${x.ok?'✅':x.half?'🟡':'❌'} ${esc(x.resp)}</td><td>${esc(x.sol)}</td></tr>`).join('')}</tbody></table></div></details>
+  <div style="display:flex;flex-direction:column;gap:6px"><span class="muted">Tu resumen (cópialo si te lo pide el profe):</span><div class="code" id="code">${esc(code)}</div><div class="row"><button class="btn ghost" id="copy">Copiar resumen</button><span id="copied" class="muted"></span></div></div>
+  ${SHEET_URL?'<p id="sendState" class="muted" style="margin:0">Enviando tus resultados al profe…</p>':''}
+  <div class="row"><button class="btn" id="again">Jugar otra vez</button><button class="btn ghost" id="change">Cambiar de nivel</button></div>`;
+  $('copy').addEventListener('click',()=>{navigator.clipboard.writeText(code).then(()=>{$('copied').textContent='Copiado'}).catch(()=>{const r=document.createRange();r.selectNodeContents($('code'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('copied').textContent='Selecciona y copia el texto'})});
+  $('again').addEventListener('click',start);
+  if(SHEET_URL){
+    const payload={id:gameId,nombre:name,grupo:grupo,nivel:LNAME[level].replace(/^\S+\s/,''),aciertos:okN,casi:halfN,puntos:pts,porTipo:porTipo,respuestas:log};
+    fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)})
+      .then(()=>{$('sendState').textContent='✅ Resultados enviados al profe.'})
+      .catch(()=>{$('sendState').textContent='⚠️ No se han podido enviar (¿sin conexión?). Copia el resumen y entrégaselo al profe.'});
+  }
+  $('change').addEventListener('click',()=>{res.hidden=true;$('start').hidden=false});
+}
+</script>
+
+</body></html>
